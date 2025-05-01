@@ -1,5 +1,4 @@
 <h1 align="center">
-  <a href="https://pion.ly"><img src="./.github/pion-gopher-webrtc.png" alt="Pion WebRTC" height="250px"></a>
   <br>
   File to LLM
   <br>
@@ -30,9 +29,9 @@
   <img alt="application/x-bzip2" src="https://img.shields.io/badge/BZ2-gray?style=for-the-badge">
 </p>
 
-File2LLM is specifically designed to works with LLMs. Not like other golang solutions, it makes sure of text location, paddings and its formatting adding structural boundaries understandable by LLM. It adds additional processing to make that text will be understandable by LLMs.
+File2LLM is specifically designed to work with LLMs. Unlike other Golang solutions, it preserves text location, padding, and formatting, adding structural boundaries that are understandable by LLMs. It also performs additional processing to ensure that the extracted text is properly interpretable by LLMs.
 
-It is designed to operate on entire disks of unstructurred data of all possible formats. It can work with nested file formats (like archives) to recursivelly read them and create files information that can be passed to LLM.
+File2LLM can handle nested file formats (such as archives) by recursively reading them and creating structured file information suitable for LLM input.
 
 ## Features
 

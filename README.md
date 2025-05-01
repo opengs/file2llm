@@ -36,22 +36,21 @@ File2LLM can handle nested file formats (such as archives) by recursively readin
 
 To make things easier, all the features that requires additional libraries to be installed or requre CGO have theirs build flags.
 
-| Type | CGO | tags | Required OCR | Notes |
-| -- | -- | -- | -- | |
-| png | NO |  | YES | |
-| jpeg | NO |  | YES | |
-| webp | NO |  | YES | |
-| gif | NO |  | YES | Extracts first frame |
-| bmp | NO |  | YES | |
-| tiff | NO |  | YES | |
-| pdf | YES | file2llm_feature_pdf  | optional | Extracts text from embeded images using OCR if available |
+| Type | CGO | tags                 | Required OCR | Notes                                                    |
+| ---- | --- | -------------------- | ------------ | -------------------------------------------------------- |
+| png  | NO  |                      | YES          |                                                          |
+| jpeg | NO  |                      | YES          |                                                          |
+| webp | NO  |                      | YES          |                                                          |
+| gif  | NO  |                      | YES          | Extracts first frame                                     |
+| bmp  | NO  |                      | YES          |                                                          |
+| tiff | NO  |                      | YES          |                                                          |
+| pdf  | YES | file2llm_feature_pdf | optional     | Extracts text from embeded images using OCR if available |
 
-| -- | -- | -- |
-| OCR Provider | Required CGO | Required tags |
-| -- | -- | -- |
-| Tesseract OCR | YES | file2llm_feature_tesseract |
-| Pabble OCR | NO |  |
-| MMOCR | NO | |
+| OCR Provider  | Required CGO | Required tags              |
+| ------------- | ------------ | -------------------------- |
+| Tesseract OCR | YES          | file2llm_feature_tesseract |
+| Pabble OCR    | NO           |                            |
+| MMOCR         | NO           |                            |
 
 ## Standalone usage with Docker
 

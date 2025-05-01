@@ -38,13 +38,13 @@ To make things easier, all the features that requires additional libraries to be
 
 | Type | CGO | tags                 | Required OCR | Notes                                                    |
 | ---- | --- | -------------------- | ------------ | -------------------------------------------------------- |
-| png  | NO  |                      | YES          |                                                          |
-| jpeg | NO  |                      | YES          |                                                          |
-| webp | NO  |                      | YES          |                                                          |
-| gif  | NO  |                      | YES          | Extracts first frame                                     |
-| bmp  | NO  |                      | YES          |                                                          |
-| tiff | NO  |                      | YES          |                                                          |
-| pdf  | ![Static Badge](https://img.shields.io/badge/YES-red?style=for-the-badge) | file2llm_feature_pdf | optional     | Extracts text from embeded images using OCR if available |
+| png  | ![NO](https://img.shields.io/badge/NO-green?style=for-the-badge)  |                      | YES          |                                                          |
+| jpeg | ![NO](https://img.shields.io/badge/NO-green?style=for-the-badge)  |                      | YES          |                                                          |
+| webp | ![NO](https://img.shields.io/badge/NO-green?style=for-the-badge)  |                      | YES          |                                                          |
+| gif  | ![NO](https://img.shields.io/badge/NO-green?style=for-the-badge)  |                      | YES          | Extracts first frame                                     |
+| bmp  | ![NO](https://img.shields.io/badge/NO-green?style=for-the-badge)  |                      | YES          |                                                          |
+| tiff | ![NO](https://img.shields.io/badge/NO-green?style=for-the-badge)  |                      | YES          |                                                          |
+| pdf  | ![YES](https://img.shields.io/badge/YES-red?style=for-the-badge) | file2llm_feature_pdf | optional     | Extracts text from embeded images using OCR if available |
 
 | OCR Provider  | Required CGO | Required tags              |
 | ------------- | ------------ | -------------------------- |

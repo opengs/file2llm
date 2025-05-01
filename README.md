@@ -36,13 +36,15 @@ File2LLM can handle nested file formats (such as archives) by recursively readin
 
 To make things easier, all the features that requires additional libraries to be installed or requre CGO have theirs build flags.
 
-| -- | -- | -- | -- |
-| Type | Requires CGO | Required tags | Required OCR |
-| -- | -- | -- | -- |
-| image/png | NO |  | YES |
-| image/jpeg | NO |  | YES |
-| image/webp | NO |  | YES |
-
+| Type | CGO | tags | Required OCR | Notes |
+| -- | -- | -- | -- | |
+| png | NO |  | YES | |
+| jpeg | NO |  | YES | |
+| webp | NO |  | YES | |
+| gif | NO |  | YES | Extracts first frame |
+| bmp | NO |  | YES | |
+| tiff | NO |  | YES | |
+| pdf | YES | file2llm_feature_pdf  | optional | Extracts text from embeded images using OCR if available |
 
 | -- | -- | -- |
 | OCR Provider | Required CGO | Required tags |

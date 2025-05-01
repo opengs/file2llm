@@ -44,7 +44,7 @@ To make things easier, all the features that requires additional libraries to be
 | gif  | NO  |                      | YES          | Extracts first frame                                     |
 | bmp  | NO  |                      | YES          |                                                          |
 | tiff | NO  |                      | YES          |                                                          |
-| pdf  | YES | file2llm_feature_pdf | optional     | Extracts text from embeded images using OCR if available |
+| pdf  | ![Static Badge](https://img.shields.io/badge/YES-red?style=flat-square) | file2llm_feature_pdf | optional     | Extracts text from embeded images using OCR if available |
 
 | OCR Provider  | Required CGO | Required tags              |
 | ------------- | ------------ | -------------------------- |

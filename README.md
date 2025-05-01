@@ -1,0 +1,69 @@
+<h1 align="center">
+  <a href="https://pion.ly"><img src="./.github/pion-gopher-webrtc.png" alt="Pion WebRTC" height="250px"></a>
+  <br>
+  File to LLM
+  <br>
+</h1>
+<h4 align="center">GO library to convert files of multiple formats to text understandable by LLM</h4>
+
+<p align="center">
+  <img alt="application/pdf" src="https://img.shields.io/badge/PDF-gray?style=for-the-badge">
+  <img alt="application/msword" src="https://img.shields.io/badge/DOC-gray?style=for-the-badge">
+  <img alt="application/vnd.openxmlformats-officedocument.wordprocessingml.document" src="https://img.shields.io/badge/DOCX-gray?style=for-the-badge">
+  <img alt="application/vnd.ms-powerpoint" src="https://img.shields.io/badge/PPT-gray?style=for-the-badge">
+  <img alt="application/application/vnd.openxmlformats-officedocument.presentationml.presentation" src="https://img.shields.io/badge/PPTX-gray?style=for-the-badge">
+  <img alt="application/vnd.oasis.opendocument.text" src="https://img.shields.io/badge/ODT-gray?style=for-the-badge">
+  <img alt="application/vnd.apple.pages" src="https://img.shields.io/badge/PAGES-gray?style=for-the-badge">
+  <img alt="application/rtf" src="https://img.shields.io/badge/RTF-gray?style=for-the-badge">
+  <br>
+  <img alt="image/png" src="https://img.shields.io/badge/PNG-lightgray?style=for-the-badge">
+  <img alt="image/jpeg" src="https://img.shields.io/badge/JPEG-lightgray?style=for-the-badge">
+  <img alt="image/webp (only static)" src="https://img.shields.io/badge/WEBP-gray?style=for-the-badge">
+  <img alt="image/bmp" src="https://img.shields.io/badge/WEBP-gray?style=for-the-badge">
+  <img alt="image/gif (only static)" src="https://img.shields.io/badge/GIF-gray?style=for-the-badge">
+  <br>
+  <img alt="application/zip" src="https://img.shields.io/badge/ZIP-gray?style=for-the-badge">
+  <img alt="application/vnd.rar" src="https://img.shields.io/badge/RAR-gray?style=for-the-badge">
+  <img alt="application/x-7z-compressed" src="https://img.shields.io/badge/7Z-gray?style=for-the-badge">
+  <img alt="application/gzip" src="https://img.shields.io/badge/GZ-gray?style=for-the-badge">
+  <img alt="application/tar" src="https://img.shields.io/badge/TAR-gray?style=for-the-badge">
+  <img alt="application/x-bzip2" src="https://img.shields.io/badge/BZ2-gray?style=for-the-badge">
+</p>
+
+File2LLM is specifically designed to works with LLMs. Not like other golang solutions, it makes sure of text location, paddings and its formatting adding structural boundaries understandable by LLM. It adds additional processing to make that text will be understandable by LLMs.
+
+It is designed to operate on entire disks of unstructurred data of all possible formats. It can work with nested file formats (like archives) to recursivelly read them and create files information that can be passed to LLM.
+
+## Features
+
+To make things easier, all the features that requires additional libraries to be installed or requre CGO have theirs build flags.
+
+| -- | -- | -- | -- |
+| Type | Requires CGO | Required tags | Required OCR |
+| -- | -- | -- | -- |
+| image/png | NO |  | YES |
+| image/jpeg | NO |  | YES |
+| image/webp | NO |  | YES |
+
+
+| -- | -- | -- |
+| OCR Provider | Required CGO | Required tags |
+| -- | -- | -- |
+| Tesseract OCR | YES | file2llm_feature_tesseract |
+| Pabble OCR | NO |  |
+| MMOCR | NO | |
+
+## Standalone usage with Docker
+
+```bash
+docker run \
+    -p 8080:8080
+    -v ./data/file2llm:/data
+    ghc
+```
+
+Docker image is precompiled with all the features enabled.
+
+## License
+file2llm is distributed under AGPL3.0 license. If you need close code commercial use
+

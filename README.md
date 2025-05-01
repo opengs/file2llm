@@ -1,12 +1,10 @@
 <h1 align="center">
-  <br>
   File to LLM
-  <br>
 </h1>
 <h4 align="center">GO library to convert files of multiple formats to text understandable by LLM</h4>
 
 <p align="center">
-  <img alt="application/pdf" src="https://img.shields.io/badge/PDF-gray?style=for-the-badge">
+  <img alt="application/pdf" src="https://img.shields.io/badge/PDF-lightgray?style=for-the-badge">
   <img alt="application/msword" src="https://img.shields.io/badge/DOC-gray?style=for-the-badge">
   <img alt="application/vnd.openxmlformats-officedocument.wordprocessingml.document" src="https://img.shields.io/badge/DOCX-gray?style=for-the-badge">
   <img alt="application/vnd.ms-powerpoint" src="https://img.shields.io/badge/PPT-gray?style=for-the-badge">
@@ -17,9 +15,10 @@
   <br>
   <img alt="image/png" src="https://img.shields.io/badge/PNG-lightgray?style=for-the-badge">
   <img alt="image/jpeg" src="https://img.shields.io/badge/JPEG-lightgray?style=for-the-badge">
-  <img alt="image/webp (only static)" src="https://img.shields.io/badge/WEBP-gray?style=for-the-badge">
-  <img alt="image/bmp" src="https://img.shields.io/badge/WEBP-gray?style=for-the-badge">
-  <img alt="image/gif (only static)" src="https://img.shields.io/badge/GIF-gray?style=for-the-badge">
+  <img alt="image/webp" src="https://img.shields.io/badge/WEBP-lightgray?style=for-the-badge">
+  <img alt="image/bmp" src="https://img.shields.io/badge/BMP-lightgray?style=for-the-badge">
+  <img alt="image/gif" src="https://img.shields.io/badge/GIF-lightgray?style=for-the-badge">
+  <img alt="image/tiff" src="https://img.shields.io/badge/TIFF-lightgray?style=for-the-badge">
   <br>
   <img alt="application/zip" src="https://img.shields.io/badge/ZIP-gray?style=for-the-badge">
   <img alt="application/vnd.rar" src="https://img.shields.io/badge/RAR-gray?style=for-the-badge">

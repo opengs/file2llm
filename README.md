@@ -101,20 +101,6 @@ go run -tags=file2llm_feature_tesseract,file2llm_feature_pdf main.go
 | ---------------- | --- | -------------------------- | -------------------------- |
 | Tesseract        | YES | file2llm_feature_tesseract | tesseract libtesseract-dev |
 | Tesseract Server | NO  |                            |                            |
-| Pabble OCR       | NO  |                            |                            |
-| MMOCR            | NO  |                            |                            |
-
-## Standalone usage with Docker
-
-```bash
-docker run \
-    -p 8080:8080
-    -v ./data/file2llm:/data
-    ghc
-```
-
-Docker image is precompiled with all the features enabled.
 
 ## License
-file2llm is distributed under AGPL3.0 license. If you need close code commercial use
-
+AGPL3.0. Commercial license in progress.

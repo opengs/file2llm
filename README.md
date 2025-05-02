@@ -38,8 +38,6 @@ File2LLM can handle nested file formats (such as archives) by recursively readin
 go get -u github.com/opengs/file2llm
 ```
 
-### Get 
-
 This will extract text from PDF including images
 
 ```go
@@ -75,23 +73,21 @@ func main() {
 
 ## Features
 
-To make things easier, all the features that requires additional libraries to be installed or requre CGO have theirs build flags.
-
-| Type | CGO | Build tags           | Required OCR | Required libraries                | Notes                                                    |
-| ---- | --- | -------------------- | ------------ | --------------------------------- | -------------------------------------------------------- |
-| png  | NO  |                      | YES          |                                   |                                                          |
-| jpeg | NO  |                      | YES          |                                   |                                                          |
-| webp | NO  |                      | YES          |                                   |                                                          |
-| gif  | NO  |                      | YES          |                                   | Extracts first frame                                     |
-| bmp  | NO  |                      | YES          |                                   |                                                          |
-| tiff | NO  |                      | YES          |                                   |                                                          |
+|      | CGO | Build tags           | Requires OCR | Required libraries                                          | Notes                                                    |
+| ---- | --- | -------------------- | ------------ | ----------------------------------------------------------- | -------------------------------------------------------- |
+| png  | NO  |                      | YES          |                                                             |                                                          |
+| jpeg | NO  |                      | YES          |                                                             |                                                          |
+| webp | NO  |                      | YES          |                                                             |                                                          |
+| gif  | NO  |                      | YES          |                                                             | Extracts first frame                                     |
+| bmp  | NO  |                      | YES          |                                                             |                                                          |
+| tiff | NO  |                      | YES          |                                                             |                                                          |
 | pdf  | YES | file2llm_feature_pdf | optional     | libpoppler-glib libpoppler-glib-dev libcairo2 libcairo2-dev | Extracts text from embeded images using OCR if available |
 
-| OCR Provider  | Required CGO | Required tags              | Required libraries          |
-| ------------- | ------------ | -------------------------- | --------------------------- |
-| Tesseract OCR | YES          | file2llm_feature_tesseract | tesseract, libtesseract-dev |
-| Pabble OCR    | NO           |                            |                             |
-| MMOCR         | NO           |                            |                             |
+| OCR Provider  | CGO | Required tags              | Required libraries         |
+| ------------- | --- | -------------------------- | -------------------------- |
+| Tesseract OCR | YES | file2llm_feature_tesseract | tesseract libtesseract-dev |
+| Pabble OCR    | NO  |                            |                            |
+| MMOCR         | NO  |                            |                            |
 
 ## Standalone usage with Docker
 

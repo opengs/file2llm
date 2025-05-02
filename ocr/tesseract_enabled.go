@@ -1,4 +1,4 @@
-//go:build !file2llm_feature_ocr_tesseract
+//go:build file2llm_feature_ocr_tesseract || test
 
 package ocr
 
@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"sync"
 
 	"github.com/otiai10/gosseract/v2"
@@ -19,18 +20,14 @@ import (
 const FeatureTesseractEnabled = true
 
 type tesseractProvider struct {
-	client       *gosseract.Client
-	lock         sync.Mutex
-	languages    []string
-	modelType    TesseractModelType
-	modelsFolder string
+	client *gosseract.Client
+	lock   sync.Mutex
+	config TesseractConfig
 }
 
-func NewTesseractProvider(languages []string, modelType TesseractModelType, modelsFolder string) Provider {
+func NewTesseractProvider(config TesseractConfig) Provider {
 	return &tesseractProvider{
-		languages:    languages,
-		modelType:    modelType,
-		modelsFolder: modelsFolder,
+		config: config,
 	}
 }
 
@@ -51,12 +48,26 @@ func (p *tesseractProvider) OCR(ctx context.Context, image []byte) (string, erro
 
 func (p *tesseractProvider) Init() error {
 	p.client = gosseract.NewClient()
-	p.client.SetLanguage(p.languages...)
-	p.client.SetVariable("load_system_dawg", "0")
-	p.client.SetVariable("load_freq_dawg", "0")
-	if err := p.loadModels(); err != nil {
+	p.client.SetLanguage(p.config.Languages...)
+	if err := p.client.DisableOutput(); err != nil {
 		p.client.Close()
-		return errors.Join(errors.New("failed to load language models"), err)
+		return errors.Join(errors.New("failed to disable logs"), err)
+	}
+	for key, val := range p.config.Variables {
+		if err := p.client.SetVariable(gosseract.SettableVariable(key), val); err != nil {
+			p.client.Close()
+			return errors.Join(fmt.Errorf("failed to set variable [%s]", key), err)
+		}
+	}
+	if p.config.LoadCustomModels {
+		if err := p.loadModels(); err != nil {
+			p.client.Close()
+			return errors.Join(errors.New("failed to load language models"), err)
+		}
+		if err := p.client.SetTessdataPrefix(p.config.ModelsFolder); err != nil {
+			p.client.Close()
+			return errors.Join(errors.New("failed to set custom models folder"), err)
+		}
 	}
 	return nil
 }
@@ -70,11 +81,11 @@ func (p *tesseractProvider) getModelDownloadLink(language string) string {
 		TesseractModelNormal:      "https://github.com/tesseract-ocr/tessdata/raw/refs/heads/main/",
 		TesseractModelBestQuality: "https://github.com/tesseract-ocr/tessdata_best/raw/refs/heads/main/",
 	}
-	return ocrModelLinkByType[p.modelType] + language + ".traineddata"
+	return ocrModelLinkByType[p.config.ModelType] + language + ".traineddata"
 }
 
 func (p *tesseractProvider) getModelsFolder() string {
-	return path.Join(p.modelsFolder, string(p.modelType))
+	return path.Join(p.config.ModelsFolder, string(p.config.ModelType))
 }
 
 func (p *tesseractProvider) getModelPath(language string) string {
@@ -86,7 +97,7 @@ func (p *tesseractProvider) loadModels() error {
 		return errors.Join(errors.New("failed to create folder for models"), err)
 	}
 
-	for _, language := range p.languages {
+	for _, language := range p.config.Languages {
 		if _, err := os.Stat(p.getModelPath(language)); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				if downloadErr := p.downloadModel(language); downloadErr != nil {
@@ -137,5 +148,5 @@ func (p *tesseractProvider) Name() ProviderName {
 }
 
 func (p *tesseractProvider) IsMimeTypeSupported(mimeType string) bool {
-	return mimeType == "image/jpeg" || mimeType == "image/png"
+	return slices.Contains(p.config.SupportedImageFormats, mimeType)
 }

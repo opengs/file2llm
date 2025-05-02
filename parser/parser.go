@@ -11,6 +11,7 @@ import (
 )
 
 var ErrBadFile = errors.New("bad file or corrupted")
+var ErrParserDisabled = errors.New("parser disabled")
 
 type ErrMimeTypeNotSupported struct {
 	MimeType *mimetype.MIME

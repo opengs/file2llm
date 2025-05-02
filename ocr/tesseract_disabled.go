@@ -1,4 +1,4 @@
-//go:build file2llm_feature_ocr_tesseract
+//go:build !file2llm_feature_ocr_tesseract && !test
 
 package ocr
 
@@ -14,7 +14,7 @@ const FeatureTesseractEnabled = false
 type tesseractProvider struct {
 }
 
-func NewTesseractProvider(languages []string, modelType TesseractModelType, modelsFolder string) Provider {
+func NewTesseractProvider(config *TesseractConfig) Provider {
 	return &tesseractProvider{}
 }
 

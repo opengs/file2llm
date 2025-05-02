@@ -10,7 +10,6 @@ import (
 )
 
 type CompositeParser struct {
-	parsers      []Parser
 	mimeToParser map[string]Parser
 }
 
@@ -23,7 +22,6 @@ func NewCompositeParser(parsers ...Parser) *CompositeParser {
 	}
 
 	return &CompositeParser{
-		parsers:      parsers,
 		mimeToParser: mimeToParser,
 	}
 }
@@ -34,7 +32,6 @@ func (p *CompositeParser) AddParsers(parsers ...Parser) {
 			p.mimeToParser[mt] = parser
 		}
 	}
-	p.parsers = append(p.parsers, parsers...)
 }
 
 func (p *CompositeParser) SupportedMimeTypes() []string {

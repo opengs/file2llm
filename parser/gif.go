@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -47,7 +46,7 @@ func (p *GIFParser) Parse(ctx context.Context, file io.Reader) Result {
 		}
 
 		var outBuf bytes.Buffer
-		if err := png.Encode(bufio.NewWriter(&outBuf), gifData.Image[0]); err != nil {
+		if err := png.Encode(&outBuf, gifData.Image[0]); err != nil {
 			return &GIFParserResult{Err: errors.Join(errors.New("failed to transcode image to PNG"), err)}
 		}
 		imageData = outBuf.Bytes()

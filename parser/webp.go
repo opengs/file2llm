@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -44,7 +43,7 @@ func (p *WebPParser) Parse(ctx context.Context, file io.Reader) Result {
 		}
 
 		var outBuf bytes.Buffer
-		if err := png.Encode(bufio.NewWriter(&outBuf), img); err != nil {
+		if err := png.Encode(&outBuf, img); err != nil {
 			return &WebPParserResult{Err: errors.Join(errors.New("failed to transcode image to PNG"), err)}
 		}
 		imageData = outBuf.Bytes()

@@ -32,25 +32,66 @@ File2LLM is specifically designed to work with LLMs. Unlike other Golang solutio
 
 File2LLM can handle nested file formats (such as archives) by recursively reading them and creating structured file information suitable for LLM input.
 
+## Example
+
+```bash
+go get -u github.com/opengs/file2llm
+```
+
+### Get 
+
+This will extract text from PDF including images
+
+```go
+package main
+
+import (
+	"context"
+	"os"
+
+	"github.com/opengs/file2llm/ocr"
+	"github.com/opengs/file2llm/parser"
+)
+
+func main() {
+	fp, err := os.Open("file.pdf")
+	if err != nil {
+		panic(err.Error())
+	}
+	defer fp.Close()
+
+  // Initialize OCR to be able to extract text from images
+	ocrProvider := ocr.NewTesseractProvider(ocr.DefaultTesseractConfig())
+	if err := ocrProvider.Init(); err != nil {
+		panic(err.Error())
+	}
+	defer ocrProvider.Destroy()
+
+	p := parser.New(ocrProvider)
+	result := p.Parse(context.Background(), fp)
+	println(result.String())
+}
+```
+
 ## Features
 
 To make things easier, all the features that requires additional libraries to be installed or requre CGO have theirs build flags.
 
-| Type | CGO | tags                 | Required OCR | Notes                                                    |
-| ---- | --- | -------------------- | ------------ | -------------------------------------------------------- |
-| png  | ![NO](https://img.shields.io/badge/NO-green?style=for-the-badge)  |                      | YES          |                                                          |
-| jpeg | ![NO](https://img.shields.io/badge/NO-green?style=for-the-badge)  |                      | YES          |                                                          |
-| webp | ![NO](https://img.shields.io/badge/NO-green?style=for-the-badge)  |                      | YES          |                                                          |
-| gif  | ![NO](https://img.shields.io/badge/NO-green?style=for-the-badge)  |                      | YES          | Extracts first frame                                     |
-| bmp  | ![NO](https://img.shields.io/badge/NO-green?style=for-the-badge)  |                      | YES          |                                                          |
-| tiff | ![NO](https://img.shields.io/badge/NO-green?style=for-the-badge)  |                      | YES          |                                                          |
-| pdf  | ![YES](https://img.shields.io/badge/YES-red?style=for-the-badge) | file2llm_feature_pdf | optional     | Extracts text from embeded images using OCR if available |
+| Type | CGO | Build tags           | Required OCR | Required libraries                | Notes                                                    |
+| ---- | --- | -------------------- | ------------ | --------------------------------- | -------------------------------------------------------- |
+| png  | NO  |                      | YES          |                                   |                                                          |
+| jpeg | NO  |                      | YES          |                                   |                                                          |
+| webp | NO  |                      | YES          |                                   |                                                          |
+| gif  | NO  |                      | YES          |                                   | Extracts first frame                                     |
+| bmp  | NO  |                      | YES          |                                   |                                                          |
+| tiff | NO  |                      | YES          |                                   |                                                          |
+| pdf  | YES | file2llm_feature_pdf | optional     | libpoppler-glib libpoppler-glib-dev libcairo2 libcairo2-dev | Extracts text from embeded images using OCR if available |
 
-| OCR Provider  | Required CGO | Required tags              |
-| ------------- | ------------ | -------------------------- |
-| Tesseract OCR | YES          | file2llm_feature_tesseract |
-| Pabble OCR    | NO           |                            |
-| MMOCR         | NO           |                            |
+| OCR Provider  | Required CGO | Required tags              | Required libraries          |
+| ------------- | ------------ | -------------------------- | --------------------------- |
+| Tesseract OCR | YES          | file2llm_feature_tesseract | tesseract, libtesseract-dev |
+| Pabble OCR    | NO           |                            |                             |
+| MMOCR         | NO           |                            |                             |
 
 ## Standalone usage with Docker
 

@@ -1,11 +1,49 @@
+//go:build file2llm_feature_pdf || test
+
 package parser
 
 /*
- #cgo pkg-config: poppler-glib
+ #cgo pkg-config: poppler-glib cairo
  #cgo pkg-config: gdk-pixbuf-2.0
  #include <poppler.h>
- #include <gdk-pixbuf/gdk-pixbuf.h>
+ #include <cairo.h>
+ #include <cairo-pdf.h>
  #include <stdlib.h>
+
+typedef struct {
+	unsigned char *current_position;
+	unsigned char *end_of_array;
+} png_stream_to_byte_array_closure_t;
+
+static cairo_status_t write_png_stream_to_byte_array (void *in_closure, const unsigned char *data, unsigned int length) {
+	png_stream_to_byte_array_closure_t *closure = (png_stream_to_byte_array_closure_t *) in_closure;
+
+	if ((closure->current_position + length) > (closure->end_of_array)) {
+		return CAIRO_STATUS_WRITE_ERROR;
+	}
+
+	memcpy (closure->current_position, data, length);
+	closure->current_position += length;
+
+	return CAIRO_STATUS_SUCCESS;
+}
+
+cairo_status_t cairo_surface_to_png_bytes(cairo_surface_t *surface, unsigned char* buffer, size_t buffer_size, size_t* len) {
+    png_stream_to_byte_array_closure_t closure;
+
+    closure.current_position = buffer;
+    closure.end_of_array = buffer + buffer_size;
+
+    cairo_status_t status = cairo_surface_write_to_png_stream(surface, write_png_stream_to_byte_array, &closure);
+    if (status != CAIRO_STATUS_SUCCESS) {
+        return status;
+    }
+
+    *len = closure.current_position - buffer; // how many bytes were written
+    return CAIRO_STATUS_SUCCESS;
+}
+
+
 */
 import "C"
 import (
@@ -91,11 +129,17 @@ func (p *PDFParser) Parse(ctx context.Context, file io.Reader) Result {
 				continue
 			}
 
-			pixbuf := (*C.GdkPixbuf)(unsafe.Pointer(image))
-			dataPtr := C.gdk_pixbuf_get_pixels(pixbuf)
-			dataLen := int(C.gdk_pixbuf_get_byte_length(pixbuf))
-			goImageBytes := C.GoBytes(unsafe.Pointer(dataPtr), C.int(dataLen))
-			C.g_object_unref(C.gpointer(image))
+			bufferSize := 8 * 1024 * 1024 // 8 MB
+			buffer := make([]byte, bufferSize)
+
+			var writtenLength C.size_t
+			status := C.cairo_surface_to_png_bytes(image, (*C.uchar)(unsafe.Pointer(&buffer[0])), C.size_t(bufferSize), &writtenLength)
+			C.cairo_surface_destroy(image)
+			if status != C.CAIRO_STATUS_SUCCESS {
+				continue
+			}
+
+			goImageBytes := buffer[:writtenLength]
 
 			imageResult := p.innerParser.Parse(ctx, bytes.NewBuffer(goImageBytes))
 			pageImages = append(pageImages, imageResult)

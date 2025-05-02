@@ -19,19 +19,19 @@ import (
 
 const FeatureTesseractEnabled = true
 
-type tesseractProvider struct {
+type Tesseract struct {
 	client *gosseract.Client
 	lock   sync.Mutex
 	config TesseractConfig
 }
 
-func NewTesseractProvider(config TesseractConfig) Provider {
-	return &tesseractProvider{
+func NewTesseractProvider(config TesseractConfig) *Tesseract {
+	return &Tesseract{
 		config: config,
 	}
 }
 
-func (p *tesseractProvider) OCR(ctx context.Context, image []byte) (string, error) {
+func (p *Tesseract) OCR(ctx context.Context, image []byte) (string, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -46,7 +46,7 @@ func (p *tesseractProvider) OCR(ctx context.Context, image []byte) (string, erro
 	return result, nil
 }
 
-func (p *tesseractProvider) Init() error {
+func (p *Tesseract) Init() error {
 	p.client = gosseract.NewClient()
 	p.client.SetLanguage(p.config.Languages...)
 	if err := p.client.DisableOutput(); err != nil {
@@ -71,11 +71,11 @@ func (p *tesseractProvider) Init() error {
 	}
 	return nil
 }
-func (p *tesseractProvider) Destroy() error {
+func (p *Tesseract) Destroy() error {
 	return p.client.Close()
 }
 
-func (p *tesseractProvider) getModelDownloadLink(language string) string {
+func (p *Tesseract) getModelDownloadLink(language string) string {
 	var ocrModelLinkByType map[TesseractModelType]string = map[TesseractModelType]string{
 		TesseractModelFast:        "https://github.com/tesseract-ocr/tessdata_fast/raw/refs/heads/main/",
 		TesseractModelNormal:      "https://github.com/tesseract-ocr/tessdata/raw/refs/heads/main/",
@@ -84,15 +84,15 @@ func (p *tesseractProvider) getModelDownloadLink(language string) string {
 	return ocrModelLinkByType[p.config.ModelType] + language + ".traineddata"
 }
 
-func (p *tesseractProvider) getModelsFolder() string {
+func (p *Tesseract) getModelsFolder() string {
 	return path.Join(p.config.ModelsFolder, string(p.config.ModelType))
 }
 
-func (p *tesseractProvider) getModelPath(language string) string {
+func (p *Tesseract) getModelPath(language string) string {
 	return path.Join(p.getModelsFolder(), language+".traineddata")
 }
 
-func (p *tesseractProvider) loadModels() error {
+func (p *Tesseract) loadModels() error {
 	if err := os.MkdirAll(p.getModelsFolder(), 0700); err != nil {
 		return errors.Join(errors.New("failed to create folder for models"), err)
 	}
@@ -112,7 +112,7 @@ func (p *tesseractProvider) loadModels() error {
 	return nil
 }
 
-func (p *tesseractProvider) downloadModel(language string) error {
+func (p *Tesseract) downloadModel(language string) error {
 	resp, err := http.Get(p.getModelDownloadLink(language))
 	if err != nil {
 		return err
@@ -143,10 +143,6 @@ func (p *tesseractProvider) downloadModel(language string) error {
 	return os.Rename(tmpFile.Name(), p.getModelPath(language))
 }
 
-func (p *tesseractProvider) Name() ProviderName {
-	return ProviderNameTesseract
-}
-
-func (p *tesseractProvider) IsMimeTypeSupported(mimeType string) bool {
+func (p *Tesseract) IsMimeTypeSupported(mimeType string) bool {
 	return slices.Contains(p.config.SupportedImageFormats, mimeType)
 }

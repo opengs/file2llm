@@ -2,9 +2,6 @@ package ocr
 
 import "path"
 
-// Tesseract provider uses local instance of the Tesseract library to dynamically link to it and run OCR
-const ProviderNameTesseract ProviderName = "TESSERACT"
-
 // Model type used by Tesseract
 type TesseractModelType string
 

@@ -8,8 +8,6 @@ type ProviderName string
 type Provider interface {
 	// Get text from image. Thread safe
 	OCR(ctx context.Context, image []byte) (string, error)
-	Init() error
-	Destroy() error
-	Name() ProviderName
+	// Check if this provider supports specific mime type
 	IsMimeTypeSupported(mimeType string) bool
 }

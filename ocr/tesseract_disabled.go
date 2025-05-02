@@ -11,28 +11,24 @@ var errTesseractProviderNotCompiled = errors.New("OCR is not possible because bi
 
 const FeatureTesseractEnabled = false
 
-type tesseractProvider struct {
+type Tesseract struct {
 }
 
-func NewTesseractProvider(config *TesseractConfig) Provider {
-	return &tesseractProvider{}
+func NewTesseractProvider(config *TesseractConfig) *Tesseract {
+	return &Tesseract{}
 }
 
-func (p *tesseractProvider) OCR(ctx context.Context, image []byte) (string, error) {
+func (p *Tesseract) OCR(ctx context.Context, image []byte) (string, error) {
 	return "", errTesseractProviderNotCompiled
 }
 
-func (p *tesseractProvider) Init() error {
+func (p *Tesseract) Init() error {
 	return errTesseractProviderNotCompiled
 }
-func (p *tesseractProvider) Destroy() error {
+func (p *Tesseract) Destroy() error {
 	return nil
 }
 
-func (p *tesseractProvider) Name() ProviderName {
-	return ProviderNameTesseract
-}
-
-func (p *tesseractProvider) IsMimeTypeSupported(mimeType string) bool {
+func (p *Tesseract) IsMimeTypeSupported(mimeType string) bool {
 	return false
 }

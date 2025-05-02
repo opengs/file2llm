@@ -83,11 +83,12 @@ func main() {
 | tiff | NO  |                      | YES          |                                                             |                                                          |
 | pdf  | YES | file2llm_feature_pdf | optional     | libpoppler-glib libpoppler-glib-dev libcairo2 libcairo2-dev | Extracts text from embeded images using OCR if available |
 
-| OCR Provider  | CGO | Required tags              | Required libraries         |
-| ------------- | --- | -------------------------- | -------------------------- |
-| Tesseract OCR | YES | file2llm_feature_tesseract | tesseract libtesseract-dev |
-| Pabble OCR    | NO  |                            |                            |
-| MMOCR         | NO  |                            |                            |
+| OCR Provider     | CGO | Required tags              | Required libraries         |
+| ---------------- | --- | -------------------------- | -------------------------- |
+| Tesseract        | YES | file2llm_feature_tesseract | tesseract libtesseract-dev |
+| Tesseract Server | NO  |                            |                            |
+| Pabble OCR       | NO  |                            |                            |
+| MMOCR            | NO  |                            |                            |
 
 ## Standalone usage with Docker
 

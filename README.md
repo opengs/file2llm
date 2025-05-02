@@ -43,7 +43,7 @@ go get -u github.com/opengs/file2llm
 Install dependencies to work with PDF and images (OCR). This is optional.
 
 ```bash
-apt install -y libpoppler-glib libpoppler-glib-dev libcairo2 libcairo2-dev tesseract libtesseract-dev
+sudo apt install -y libpoppler-glib-dev libcairo2 libcairo2-dev libtesseract-dev
 ```
 
 This will extract text from PDF including images

@@ -4,7 +4,6 @@ package parser
 
 /*
  #cgo pkg-config: poppler-glib cairo
- #cgo pkg-config: gdk-pixbuf-2.0
  #include <poppler.h>
  #include <cairo.h>
  #include <cairo-pdf.h>

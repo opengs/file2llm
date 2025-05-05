@@ -95,7 +95,7 @@ go run -tags=file2llm_feature_tesseract,file2llm_feature_pdf main.go
 | gif  | NO  |                      | YES          |                                                             | Extracts first frame                                     |
 | bmp  | NO  |                      | YES          |                                                             |                                                          |
 | tiff | NO  |                      | YES          |                                                             |                                                          |
-| pdf  | YES | file2llm_feature_pdf | optional     | libpoppler-glib libpoppler-glib-dev libcairo2 libcairo2-dev | Extracts text from embeded images using OCR if available |
+| pdf  | YES | file2llm_feature_pdf | optional     | poppler-utils libpoppler-dev libpoppler-glib-dev libcairo2 libcairo2-dev | Extracts text from embeded images using OCR if available |
 
 | OCR Provider     | CGO | Required tags              | Required libraries         |
 | ---------------- | --- | -------------------------- | -------------------------- |

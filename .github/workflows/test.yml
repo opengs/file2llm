@@ -15,7 +15,7 @@ jobs:
       - name: Install libraries
         run: |
           sudo apt update
-          sudo apt install -y libpng-dev libjpeg-dev libtiff-dev tesseract libtesseract-dev tesseract-ocr poppler-utils libpoppler-dev libpoppler-glib-dev libcairo2 libcairo2-dev
+          sudo apt install -y libpng-dev libjpeg-dev libtiff-dev libtesseract-dev tesseract-ocr poppler-utils libpoppler-dev libpoppler-glib-dev libcairo2 libcairo2-dev
 
       - name: Set up Go
         uses: actions/setup-go@v4

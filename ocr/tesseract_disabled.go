@@ -14,7 +14,7 @@ const FeatureTesseractEnabled = false
 type Tesseract struct {
 }
 
-func NewTesseractProvider(config *TesseractConfig) *Tesseract {
+func NewTesseract(config TesseractConfig) *Tesseract {
 	return &Tesseract{}
 }
 

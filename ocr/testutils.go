@@ -20,7 +20,7 @@ func NewTestingOCRProvider(t *testing.T) Provider {
 	}
 
 	config := DefaultTesseractConfig()
-	tesseract := NewTesseractProvider(config)
+	tesseract := NewTesseract(config)
 	if err := tesseract.Init(); err != nil {
 		os.RemoveAll(tempDir)
 		t.Log(err.Error())

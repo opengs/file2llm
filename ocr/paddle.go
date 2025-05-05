@@ -9,9 +9,10 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strings"
 )
 
-type TesseractServerConfig struct {
+type PaddleConfig struct {
 	// HTTP client used to make requests to the server
 	Client *http.Client
 	// Server base URL. For example http://127.0.0.1:8884
@@ -22,26 +23,25 @@ type TesseractServerConfig struct {
 	Languages []string `json:"languages"`
 }
 
-func DefaultTesseractServerConfig() TesseractServerConfig {
-	return TesseractServerConfig{
+func DefaultPaddleConfig() PaddleConfig {
+	return PaddleConfig{
 		Languages: []string{"eng"},
 		BaseURL:   "http://127.0.0.1:8884",
 		Client:    http.DefaultClient,
 	}
 }
 
-// Uses tesseract server as OCR backend. https://github.com/otiai10/ocrserver
-type TesseractServer struct {
-	config TesseractServerConfig
+type Paddle struct {
+	config PaddleConfig
 }
 
-func NewTesseractServer(config TesseractServerConfig) *TesseractServer {
-	return &TesseractServer{
+func NewPaddle(config PaddleConfig) *Paddle {
+	return &Paddle{
 		config: config,
 	}
 }
 
-func (p *TesseractServer) OCR(ctx context.Context, image []byte) (string, error) {
+func (p *Paddle) OCR(ctx context.Context, image []byte) (string, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	imagePart, err := writer.CreateFormFile("file", "data")
@@ -53,17 +53,8 @@ func (p *TesseractServer) OCR(ctx context.Context, image []byte) (string, error)
 		return "", errors.Join(errors.New("failed to prepare multipart form data: failed to write image to multipart"), err)
 	}
 
-	var ocrOptions struct {
-		Languages []string `json:"languages"`
-	}
-	ocrOptions.Languages = p.config.Languages
-	ocrOptionsBytes, err := json.Marshal(ocrOptions)
-	if err != nil {
-		return "", errors.Join(errors.New("failed to marshall OCR options"), err)
-	}
-
-	if err = writer.WriteField("options", string(ocrOptionsBytes)); err != nil {
-		return "", errors.Join(errors.New("failed to prepare multipart form data: failed to write options to multipart"), err)
+	if err = writer.WriteField("languages", strings.Join(p.config.Languages, ",")); err != nil {
+		return "", errors.Join(errors.New("failed to prepare multipart form data: failed to write languages to multipart"), err)
 	}
 
 	err = writer.Close()
@@ -71,7 +62,7 @@ func (p *TesseractServer) OCR(ctx context.Context, image []byte) (string, error)
 		return "", errors.Join(errors.New("failed to prepare multipart form data: failed to finalize writer"), err)
 	}
 
-	req, err := http.NewRequest("POST", p.config.BaseURL+"/tesseract", body)
+	req, err := http.NewRequest("POST", p.config.BaseURL+"/ocr", body)
 	if err != nil {
 		return "", errors.Join(errors.New("failed to prepare HTTP request"), err)
 	}
@@ -88,13 +79,7 @@ func (p *TesseractServer) OCR(ctx context.Context, image []byte) (string, error)
 	}
 
 	var responseData struct {
-		Data struct {
-			Exit struct {
-				Code uint `json:"code"`
-			} `json:"exit"`
-			StdErr string `json:"stderr"`
-			StdOut string `json:"stdout"`
-		} `json:"data"`
+		Text string `json:"text"`
 	}
 
 	responseBytes, err := io.ReadAll(resp.Body)
@@ -106,13 +91,9 @@ func (p *TesseractServer) OCR(ctx context.Context, image []byte) (string, error)
 		return "", errors.Join(errors.New("failed to unmarshall response from remote server"), err)
 	}
 
-	if responseData.Data.Exit.Code != 0 {
-		return "", fmt.Errorf("bad OCR execution status code: status code %d", responseData.Data.Exit.Code)
-	}
-
-	return responseData.Data.StdOut, nil
+	return responseData.Text, nil
 }
 
-func (p *TesseractServer) IsMimeTypeSupported(mimeType string) bool {
+func (p *Paddle) IsMimeTypeSupported(mimeType string) bool {
 	return mimeType == "image/jpeg" || mimeType == "image/png"
 }

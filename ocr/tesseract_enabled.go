@@ -25,7 +25,7 @@ type Tesseract struct {
 	config TesseractConfig
 }
 
-func NewTesseractProvider(config TesseractConfig) *Tesseract {
+func NewTesseract(config TesseractConfig) *Tesseract {
 	return &Tesseract{
 		config: config,
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -32,11 +33,13 @@ var serveCMD = &cobra.Command{
 			config.ModelsFolder, _ = cmd.Flags().GetString("ocr-tesseract-models-folder")
 			config.SupportedImageFormats, _ = cmd.Flags().GetStringSlice("ocr-tesseract-supported-mime-types")
 
-			tesseract := ocr.NewTesseract(config)
-			if err := tesseract.Init(); err != nil {
+			tesseractPoolSize, _ := cmd.Flags().GetUint32("ocr-tesseract-pool-size")
+
+			tesseract := ocr.NewTesseractPool(tesseractPoolSize, config)
+			if err := tesseract.Init(context.Background()); err != nil {
 				return fmt.Errorf("failed to initialize tesseract OCR provider: %s", err.Error())
 			}
-			defer tesseract.Destroy()
+			defer tesseract.Destroy(context.Background())
 
 			ocrProvider = tesseract
 		}
@@ -94,4 +97,5 @@ func init() {
 	serveCMD.Flags().String("ocr-tesseract-model", "NORMAL", "Model type to user. Supported values are FAST, NORMAL, BEST_QUALITY. Only works when ")
 	serveCMD.Flags().String("ocr-tesseract-models-folder", "./data/ocr/tesseract", "Location on the disk where to load custom tesseract models")
 	serveCMD.Flags().StringSlice("ocr-tesseract-supported-mime-types", []string{"image/png", "image/jpeg", "image/tiff", "image/pnm", "image/gif", "image/webp"}, "List of mime types supported by tesseract")
+	serveCMD.Flags().Uint32("ocr-tesseract-pool-size", 1, "Maximum number of tesseract instances running at the same time")
 }

@@ -41,4 +41,5 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/spf13/cobra v1.9.1
 	golang.org/x/net v0.39.0 // indirect
+	golang.org/x/sync v0.14.0
 )

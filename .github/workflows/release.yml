@@ -1,7 +1,7 @@
 name: Release new version
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 on:

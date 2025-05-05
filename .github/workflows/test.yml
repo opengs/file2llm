@@ -1,0 +1,29 @@
+name: Run Tests
+on:
+  push:
+    branches:
+      - '**' #ignore tags, because tags will be tested using workflow_call during the release workflow
+  workflow_call:
+
+jobs:
+  test_all:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install libraries
+        run: |
+          sudo apt update
+          sudo apt install -y libpng-dev libjpeg-dev libtiff-dev tesseract libtesseract-dev tesseract-ocr libpoppler-glib libpoppler-glib-dev libcairo2 libcairo2-dev
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.24.0
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run Tests
+        run: go test --tags=file2llm_feature_tesseract,file2llm_feature_pdf ./...

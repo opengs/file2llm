@@ -7,6 +7,8 @@ import (
 	"io"
 )
 
+const FeaturePDFEnabled = false
+
 // Parses `application/pdf` files
 type PDFParser struct {
 }

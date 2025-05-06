@@ -55,6 +55,8 @@ import (
 	"unsafe"
 )
 
+const FeaturePDFEnabled = true
+
 // Parses `application/pdf` files
 type PDFParser struct {
 	innerParser Parser

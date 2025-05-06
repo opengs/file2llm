@@ -41,14 +41,14 @@ func NewTesseractServer(config TesseractServerConfig) *TesseractServer {
 	}
 }
 
-func (p *TesseractServer) OCR(ctx context.Context, image []byte) (string, error) {
+func (p *TesseractServer) OCR(ctx context.Context, image io.Reader) (string, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	imagePart, err := writer.CreateFormFile("file", "data")
 	if err != nil {
 		return "", errors.Join(errors.New("failed to prepare multipart form data: failed to prepare image for sending as file"), err)
 	}
-	_, err = io.Copy(imagePart, bytes.NewReader(image))
+	_, err = io.Copy(imagePart, image)
 	if err != nil {
 		return "", errors.Join(errors.New("failed to prepare multipart form data: failed to write image to multipart"), err)
 	}

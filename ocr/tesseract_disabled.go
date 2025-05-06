@@ -5,6 +5,7 @@ package ocr
 import (
 	"context"
 	"errors"
+	"io"
 )
 
 var errTesseractProviderNotCompiled = errors.New("OCR is not possible because binary wasnt compiled with internal tesseract OCR provider")
@@ -18,7 +19,7 @@ func NewTesseract(config TesseractConfig) *Tesseract {
 	return &Tesseract{}
 }
 
-func (p *Tesseract) OCR(ctx context.Context, image []byte) (string, error) {
+func (p *Tesseract) OCR(ctx context.Context, image io.Reader) (string, error) {
 	return "", errTesseractProviderNotCompiled
 }
 

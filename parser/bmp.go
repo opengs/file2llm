@@ -28,14 +28,11 @@ func (p *BMPParser) SupportedMimeTypes() []string {
 }
 
 func (p *BMPParser) Parse(ctx context.Context, file io.Reader) Result {
-	var imageData []byte
+	var imageData io.Reader
 	var err error
 
 	if p.ocrProvider.IsMimeTypeSupported("image/bmp") {
-		imageData, err = io.ReadAll(file)
-		if err != nil {
-			return &BMPParserResult{Err: errors.Join(errors.New("failed to read data to the bytes buffer"), err)}
-		}
+		imageData = file
 	} else {
 		img, err := bmp.Decode(file)
 		if err != nil {
@@ -46,7 +43,7 @@ func (p *BMPParser) Parse(ctx context.Context, file io.Reader) Result {
 		if err := png.Encode(&outBuf, img); err != nil {
 			return &BMPParserResult{Err: errors.Join(errors.New("failed to transcode image to PNG"), err)}
 		}
-		imageData = outBuf.Bytes()
+		imageData = &outBuf
 	}
 
 	text, err := p.ocrProvider.OCR(ctx, imageData)

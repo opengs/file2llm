@@ -31,11 +31,16 @@ func NewTesseract(config TesseractConfig) *Tesseract {
 	}
 }
 
-func (p *Tesseract) OCR(ctx context.Context, image []byte) (string, error) {
+func (p *Tesseract) OCR(ctx context.Context, image io.Reader) (string, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	if err := p.client.SetImageFromBytes(image); err != nil {
+	imageBytes, err := io.ReadAll(image)
+	if err != nil {
+		return "", errors.Join(errors.New("failed to read image bytes"), err)
+	}
+
+	if err := p.client.SetImageFromBytes(imageBytes); err != nil {
 		return "", errors.Join(errors.New("failed to prepare image for OCR"), err)
 	}
 	result, err := p.client.Text()

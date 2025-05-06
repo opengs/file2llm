@@ -29,14 +29,11 @@ func (p *JPEGParser) SupportedMimeTypes() []string {
 }
 
 func (p *JPEGParser) Parse(ctx context.Context, file io.Reader) Result {
-	var imageData []byte
+	var imageData io.Reader
 	var err error
 
 	if p.ocrProvider.IsMimeTypeSupported("image/jpeg") {
-		imageData, err = io.ReadAll(file)
-		if err != nil {
-			return &JPEGParserResult{Err: errors.Join(errors.New("failed to read data to the bytes buffer"), err)}
-		}
+		imageData = file
 	} else {
 		img, _, err := image.Decode(file)
 		if err != nil {
@@ -47,7 +44,7 @@ func (p *JPEGParser) Parse(ctx context.Context, file io.Reader) Result {
 		if err := png.Encode(&outBuf, img); err != nil {
 			return &JPEGParserResult{Err: errors.Join(errors.New("failed to transcode image to PNG"), err)}
 		}
-		imageData = outBuf.Bytes()
+		imageData = &outBuf
 	}
 
 	text, err := p.ocrProvider.OCR(ctx, imageData)

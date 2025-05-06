@@ -28,14 +28,11 @@ func (p *GIFParser) SupportedMimeTypes() []string {
 }
 
 func (p *GIFParser) Parse(ctx context.Context, file io.Reader) Result {
-	var imageData []byte
+	var imageData io.Reader
 	var err error
 
 	if p.ocrProvider.IsMimeTypeSupported("image/gif") {
-		imageData, err = io.ReadAll(file)
-		if err != nil {
-			return &GIFParserResult{Err: errors.Join(errors.New("failed to read data to the bytes buffer"), err)}
-		}
+		imageData = file
 	} else {
 		gifData, err := gif.DecodeAll(file)
 		if err != nil {
@@ -49,7 +46,7 @@ func (p *GIFParser) Parse(ctx context.Context, file io.Reader) Result {
 		if err := png.Encode(&outBuf, gifData.Image[0]); err != nil {
 			return &GIFParserResult{Err: errors.Join(errors.New("failed to transcode image to PNG"), err)}
 		}
-		imageData = outBuf.Bytes()
+		imageData = &outBuf
 	}
 
 	text, err := p.ocrProvider.OCR(ctx, imageData)

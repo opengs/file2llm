@@ -3,6 +3,7 @@ package ocr
 import (
 	"context"
 	"errors"
+	"io"
 	"slices"
 	"sync"
 
@@ -70,7 +71,7 @@ func (p *TesseractPool) Destroy(ctx context.Context) error {
 	}
 }
 
-func (p *TesseractPool) OCR(ctx context.Context, image []byte) (string, error) {
+func (p *TesseractPool) OCR(ctx context.Context, image io.Reader) (string, error) {
 	if err := p.workLock.Acquire(ctx, 1); err != nil {
 		return "", errors.Join(errors.New("failed to accuire work lock"), err)
 	}

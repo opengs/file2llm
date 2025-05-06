@@ -28,14 +28,11 @@ func (p *TiffParser) SupportedMimeTypes() []string {
 }
 
 func (p *TiffParser) Parse(ctx context.Context, file io.Reader) Result {
-	var imageData []byte
+	var imageData io.Reader
 	var err error
 
 	if p.ocrProvider.IsMimeTypeSupported("image/tiff") {
-		imageData, err = io.ReadAll(file)
-		if err != nil {
-			return &TiffParserResult{Err: errors.Join(errors.New("failed to read data to the bytes buffer"), err)}
-		}
+		imageData = file
 	} else {
 		img, err := tiff.Decode(file)
 		if err != nil {
@@ -46,7 +43,7 @@ func (p *TiffParser) Parse(ctx context.Context, file io.Reader) Result {
 		if err := png.Encode(&outBuf, img); err != nil {
 			return &TiffParserResult{Err: errors.Join(errors.New("failed to transcode image to PNG"), err)}
 		}
-		imageData = outBuf.Bytes()
+		imageData = &outBuf
 	}
 
 	text, err := p.ocrProvider.OCR(ctx, imageData)

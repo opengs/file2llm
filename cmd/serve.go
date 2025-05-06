@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"slices"
 
@@ -59,13 +58,7 @@ var serveCMD = &cobra.Command{
 			})
 		})
 		ginEngine.POST("/ocr", func(ctx *gin.Context) {
-			data, err := io.ReadAll(ctx.Request.Body)
-			if err != nil {
-				ctx.AbortWithError(http.StatusBadRequest, err)
-				return
-			}
-
-			result, err := ocrProvider.OCR(ctx.Request.Context(), data)
+			result, err := ocrProvider.OCR(ctx.Request.Context(), ctx.Request.Body)
 			var errorString string
 			if err != nil {
 				errorString = err.Error()

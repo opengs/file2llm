@@ -24,12 +24,7 @@ func (p *PNGParser) SupportedMimeTypes() []string {
 }
 
 func (p *PNGParser) Parse(ctx context.Context, file io.Reader) Result {
-	imageData, err := io.ReadAll(file)
-	if err != nil {
-		return &PNGParserResult{Err: errors.Join(errors.New("failed to read data to the bytes buffer"), err)}
-	}
-
-	text, err := p.ocrProvider.OCR(ctx, imageData)
+	text, err := p.ocrProvider.OCR(ctx, file)
 	if err != nil {
 		return &PNGParserResult{Err: errors.Join(errors.New("errors while running OCR"), err)}
 	}

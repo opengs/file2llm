@@ -1,4 +1,4 @@
-package bgra2rgba
+package bgra
 
 import (
 	"runtime"
@@ -55,8 +55,4 @@ func convertBGRAtoRGBAInplaceFunc(width, height, stride int, data []byte, f func
 		end := start + width*4
 		f(data[start:end])
 	}
-}
-
-func ConvertBGRAtoRGBAInplace(width, height, stride int, data []byte) {
-	convertBGRAtoRGBAInplaceFunc(width, height, stride, data, bgraToRgbaInPlaceFunc)
 }

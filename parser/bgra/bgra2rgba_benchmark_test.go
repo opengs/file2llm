@@ -1,4 +1,4 @@
-package bgra2rgba
+package bgra
 
 import "testing"
 

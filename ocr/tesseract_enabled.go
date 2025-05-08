@@ -3,6 +3,7 @@
 package ocr
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -14,7 +15,8 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/otiai10/gosseract/v2"
+	"github.com/opengs/file2llm/ocr/gosseract"
+	"github.com/opengs/file2llm/parser/bgra"
 )
 
 const FeatureTesseractEnabled = true
@@ -40,8 +42,20 @@ func (p *Tesseract) OCR(ctx context.Context, image io.Reader) (string, error) {
 		return "", errors.Join(errors.New("failed to read image bytes"), err)
 	}
 
-	if err := p.client.SetImageFromBytes(imageBytes); err != nil {
-		return "", errors.Join(errors.New("failed to prepare image for OCR"), err)
+	if bytes.HasPrefix(imageBytes, bgra.RAWBGRA_HEADER) {
+		img, err := bgra.ReadRAWBGRAImageFromBytes(imageBytes)
+		if err != nil {
+			return "", errors.Join(errors.New("failed to read bgra raw image data"), err)
+		}
+		rgbaImage := img.ConvertBGRAtoRGBAInplace()
+		if err := p.client.SetImageFromRGBAImage(rgbaImage); err != nil {
+			return "", errors.Join(errors.New("failed to prepare image for OCR"), err)
+		}
+
+	} else {
+		if err := p.client.SetImageFromBytes(imageBytes); err != nil {
+			return "", errors.Join(errors.New("failed to prepare image for OCR"), err)
+		}
 	}
 	result, err := p.client.Text()
 	if err != nil {
@@ -156,5 +170,5 @@ func (p *Tesseract) downloadModel(language string) error {
 }
 
 func (p *Tesseract) IsMimeTypeSupported(mimeType string) bool {
-	return slices.Contains(p.config.SupportedImageFormats, mimeType)
+	return slices.Contains(p.config.SupportedImageFormats, mimeType) || mimeType == "image/file2llm-raw-bgra"
 }

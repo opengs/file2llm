@@ -19,6 +19,8 @@ import (
 	"io"
 	"strings"
 	"unsafe"
+
+	"github.com/opengs/file2llm/parser/bgra"
 )
 
 const FeaturePDFEnabled = true
@@ -122,7 +124,7 @@ func (p *PDFParser) Parse(ctx context.Context, file io.Reader) Result {
 				binary.BigEndian.PutUint64(sizes[8:], uint64(height))
 				binary.BigEndian.PutUint64(sizes[16:], uint64(stride))
 				rgbaStream := io.MultiReader(
-					bytes.NewBuffer(RAWRGBA_HEADER),
+					bytes.NewBuffer(bgra.RAWBGRA_HEADER),
 					bytes.NewBuffer(sizes),
 					bytes.NewBuffer(buf),
 				)

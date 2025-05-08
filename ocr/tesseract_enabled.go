@@ -53,7 +53,14 @@ func (p *Tesseract) OCR(ctx context.Context, image io.Reader) (string, error) {
 
 func (p *Tesseract) Init() error {
 	p.client = gosseract.NewClient()
-	p.client.SetLanguage(p.config.Languages...)
+	if err := p.client.SetLanguage(p.config.Languages...); err != nil {
+		p.client.Close()
+		return errors.Join(errors.New("failed to set languages"), err)
+	}
+	if err := p.client.SetVariable("tessedit_pageseg_mode", "1"); err != nil { // Automatic detection of image rotation. Build in function for set segmentation doesnt work, maybe bug in library
+		p.client.Close()
+		return errors.Join(errors.New("failed to set pageseg mode"), err)
+	}
 	if err := p.client.DisableOutput(); err != nil {
 		p.client.Close()
 		return errors.Join(errors.New("failed to disable logs"), err)

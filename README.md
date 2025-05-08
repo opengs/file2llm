@@ -32,6 +32,8 @@ File2LLM is specifically designed to work with LLMs. Unlike other Golang solutio
 
 File2LLM can handle nested file formats (such as archives) by recursively reading them and creating structured file information suitable for LLM input.
 
+It's optimized with custom CGo code and Assembler.
+
 ## Example
 
 Get the main `file2llm` library

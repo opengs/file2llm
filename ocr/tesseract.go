@@ -25,6 +25,8 @@ type TesseractConfig struct {
 	// On startup, tesseract will download models from the internet and save them to specified location. Default is `./data/ocr/tesseract`
 	ModelsFolder string `json:"modelsFolder"`
 	// Variable to pass on tesseract initialization. For example you can pass {"load_system_dawg":"0"} to disable loading words list from the system
+	//
+	// Default is {"load_system_dawg": "0", "load_freq_dawg": "0", "load_punc_dawg": "0", "load_number_dawg": "0", "load_unambig_dawg": "0", "load_bigram_dawg": "0"}
 	Variables map[string]string `json:"variables"`
 	// Image formats supported by tessecart. Tesseract requires you to install third party libraries on the target machine to support all the image formats.
 	// If you cant do this, you can redefine this list of supported libraries so images will be automatically converted into required format internally.
@@ -38,11 +40,18 @@ type TesseractConfig struct {
 
 func DefaultTesseractConfig() TesseractConfig {
 	return TesseractConfig{
-		Languages:             []string{"eng"},
-		ModelType:             TesseractModelNormal,
-		LoadCustomModels:      false,
-		ModelsFolder:          path.Join("data", "ocr", "tesseract"),
-		Variables:             map[string]string{},
+		Languages:        []string{"eng"},
+		ModelType:        TesseractModelNormal,
+		LoadCustomModels: false,
+		ModelsFolder:     path.Join("data", "ocr", "tesseract"),
+		Variables: map[string]string{
+			"load_system_dawg":  "0",
+			"load_freq_dawg":    "0",
+			"load_punc_dawg":    "0",
+			"load_number_dawg":  "0",
+			"load_unambig_dawg": "0",
+			"load_bigram_dawg":  "0",
+		},
 		SupportedImageFormats: []string{"image/png", "image/jpeg", "image/tiff", "image/pnm", "image/gif", "image/webp"},
 	}
 }

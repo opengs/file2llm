@@ -49,6 +49,7 @@ func New(ocrProvider ocr.Provider) Parser {
 			NewGIFParser(ocrProvider),
 			NewTiffParser(ocrProvider),
 			NewWebPParser(ocrProvider),
+			NewRAWBGRAParser(ocrProvider),
 		)
 	}
 

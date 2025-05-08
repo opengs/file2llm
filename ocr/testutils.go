@@ -20,6 +20,14 @@ func NewTestingOCRProvider(t *testing.T) Provider {
 	}
 
 	config := DefaultTesseractConfig()
+	config.Variables = map[string]string{
+		"load_system_dawg":  "0",
+		"load_freq_dawg":    "0",
+		"load_punc_dawg":    "0",
+		"load_number_dawg":  "0",
+		"load_unambig_dawg": "0",
+		"load_bigram_dawg":  "0",
+	}
 	tesseract := NewTesseract(config)
 	if err := tesseract.Init(); err != nil {
 		os.RemoveAll(tempDir)

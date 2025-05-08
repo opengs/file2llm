@@ -8,46 +8,12 @@ package parser
  #include <cairo.h>
  #include <cairo-pdf.h>
  #include <stdlib.h>
-
-typedef struct {
-	unsigned char *current_position;
-	unsigned char *end_of_array;
-} png_stream_to_byte_array_closure_t;
-
-static cairo_status_t write_png_stream_to_byte_array (void *in_closure, const unsigned char *data, unsigned int length) {
-	png_stream_to_byte_array_closure_t *closure = (png_stream_to_byte_array_closure_t *) in_closure;
-
-	if ((closure->current_position + length) > (closure->end_of_array)) {
-		return CAIRO_STATUS_WRITE_ERROR;
-	}
-
-	memcpy (closure->current_position, data, length);
-	closure->current_position += length;
-
-	return CAIRO_STATUS_SUCCESS;
-}
-
-cairo_status_t cairo_surface_to_png_bytes(cairo_surface_t *surface, unsigned char* buffer, size_t buffer_size, size_t* len) {
-    png_stream_to_byte_array_closure_t closure;
-
-    closure.current_position = buffer;
-    closure.end_of_array = buffer + buffer_size;
-
-    cairo_status_t status = cairo_surface_write_to_png_stream(surface, write_png_stream_to_byte_array, &closure);
-    if (status != CAIRO_STATUS_SUCCESS) {
-        return status;
-    }
-
-    *len = closure.current_position - buffer; // how many bytes were written
-    return CAIRO_STATUS_SUCCESS;
-}
-
-
 */
 import "C"
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -78,11 +44,14 @@ func (p *PDFParser) Parse(ctx context.Context, file io.Reader) Result {
 		return &PDFParserResult{Err: errors.Join(errors.New("failed to read data to the bytes buffer"), err)}
 	}
 
-	cData := (*C.char)(unsafe.Pointer(&pdfData[0]))
-	dataLength := C.int(len(pdfData))
+	gbytes := C.g_bytes_new(C.gconstpointer(unsafe.Pointer(&pdfData[0])), C.size_t(len(pdfData)))
+	if gbytes == nil {
+		return &PDFParserResult{Err: errors.New("failed to create GBytes")}
+	}
+	defer C.g_bytes_unref(gbytes)
 
 	var gErr *C.GError
-	doc := C.poppler_document_new_from_data(cData, dataLength, nil, &gErr)
+	doc := C.poppler_document_new_from_bytes(gbytes, nil, &gErr)
 	if doc == nil {
 		if gErr != nil {
 			defer C.g_error_free(gErr)
@@ -106,9 +75,9 @@ func (p *PDFParser) Parse(ctx context.Context, file io.Reader) Result {
 
 	var pages []PDFParserResultPage
 
-	n_pages := C.poppler_document_get_n_pages(doc)
+	n_pages := int(C.poppler_document_get_n_pages(doc))
 	for pageIndex := range n_pages {
-		page := C.poppler_document_get_page(doc, pageIndex)
+		page := C.poppler_document_get_page(doc, C.int(pageIndex))
 		if page == nil {
 			continue
 		}
@@ -116,36 +85,53 @@ func (p *PDFParser) Parse(ctx context.Context, file io.Reader) Result {
 
 		// Get all the text from the page
 		textC := C.poppler_page_get_text(page)
-		text := C.GoString((*C.char)(textC))
-		pageResult.Text = text
-		C.g_free(C.gpointer(textC))
+		if unsafe.Pointer(textC) != nil {
+			text := C.GoString(textC)
+			pageResult.Text = text
+			C.g_free(C.gpointer(textC))
+		}
 
 		// Get all the images on the page
 		var pageImages []Result
 		imageMappingList := C.poppler_page_get_image_mapping(page)
-		for l := imageMappingList; l != nil; l = l.next {
-			mapping := (*C.PopplerImageMapping)(l.data)
-			image := C.poppler_page_get_image(page, mapping.image_id)
-			if image == nil {
-				continue
+		if imageMappingList != nil {
+			for l := imageMappingList; l != nil; l = l.next {
+				mapping := (*C.PopplerImageMapping)(l.data)
+				cImage := C.poppler_page_get_image(page, mapping.image_id)
+				if cImage == nil {
+					continue
+				}
+
+				format := C.cairo_image_surface_get_format(cImage)
+				if format != C.CAIRO_FORMAT_ARGB32 && format != C.CAIRO_FORMAT_RGB24 {
+					C.cairo_surface_destroy(cImage)
+					continue
+				}
+
+				width := int(C.cairo_image_surface_get_width(cImage))
+				height := int(C.cairo_image_surface_get_height(cImage))
+				stride := int(C.cairo_image_surface_get_stride(cImage))
+				data := C.cairo_image_surface_get_data(cImage)
+
+				bufSize := height * stride
+				buf := C.GoBytes(unsafe.Pointer(data), C.int(bufSize))
+				C.cairo_surface_destroy(cImage)
+
+				sizes := make([]byte, 8+8+8)
+				binary.BigEndian.PutUint64(sizes, uint64(width))
+				binary.BigEndian.PutUint64(sizes[8:], uint64(height))
+				binary.BigEndian.PutUint64(sizes[16:], uint64(stride))
+				rgbaStream := io.MultiReader(
+					bytes.NewBuffer(RAWRGBA_HEADER),
+					bytes.NewBuffer(sizes),
+					bytes.NewBuffer(buf),
+				)
+
+				imageResult := p.innerParser.Parse(ctx, rgbaStream)
+				pageImages = append(pageImages, imageResult)
 			}
-
-			bufferSize := 8 * 1024 * 1024 // 8 MB
-			buffer := make([]byte, bufferSize)
-
-			var writtenLength C.size_t
-			status := C.cairo_surface_to_png_bytes(image, (*C.uchar)(unsafe.Pointer(&buffer[0])), C.size_t(bufferSize), &writtenLength)
-			C.cairo_surface_destroy(image)
-			if status != C.CAIRO_STATUS_SUCCESS {
-				continue
-			}
-
-			goImageBytes := buffer[:writtenLength]
-
-			imageResult := p.innerParser.Parse(ctx, bytes.NewBuffer(goImageBytes))
-			pageImages = append(pageImages, imageResult)
+			C.poppler_page_free_image_mapping(imageMappingList)
 		}
-		C.poppler_page_free_image_mapping(imageMappingList)
 		pageResult.Images = pageImages
 
 		C.g_object_unref(C.gpointer(page))

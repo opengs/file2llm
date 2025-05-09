@@ -90,7 +90,7 @@ func (p *Tesseract) Init() error {
 			p.client.Close()
 			return errors.Join(errors.New("failed to load language models"), err)
 		}
-		if err := p.client.SetTessdataPrefix(p.config.ModelsFolder); err != nil {
+		if err := p.client.SetTessdataPrefix(p.getModelsFolder()); err != nil {
 			p.client.Close()
 			return errors.Join(errors.New("failed to set custom models folder"), err)
 		}
@@ -131,6 +131,18 @@ func (p *Tesseract) loadModels() error {
 				}
 			} else {
 				return errors.Join(errors.New("unexpected error while checking if model exists"), err)
+			}
+		}
+	}
+
+	if !slices.Contains(p.config.Languages, "osd") { // Orientation and script detection (OSD) model also must be loaded
+		if _, err := os.Stat(p.getModelPath("osd")); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				if downloadErr := p.downloadModel("osd"); downloadErr != nil {
+					return errors.Join(errors.New("failed to download OSD model"), downloadErr)
+				}
+			} else {
+				return errors.Join(errors.New("unexpected error while checking if OSD model exists"), err)
 			}
 		}
 	}

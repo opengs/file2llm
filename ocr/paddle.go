@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"strings"
+	"sync"
 )
 
 type PaddleConfig struct {
@@ -94,6 +95,41 @@ func (p *Paddle) OCR(ctx context.Context, image io.Reader) (string, error) {
 	return responseData.Text, nil
 }
 
+func (p *Paddle) OCRWithProgress(ctx context.Context, image io.Reader) OCRProgress {
+	progress := &paddleServerOCRProgress{
+		progressCh: make(chan uint8, 1),
+	}
+	progress.resultWaiter.Add(1)
+
+	go func() {
+		defer progress.resultWaiter.Done()
+		defer close(progress.progressCh)
+		progress.resultText, progress.resultError = p.OCR(ctx, image)
+	}()
+
+	return progress
+}
+
 func (p *Paddle) IsMimeTypeSupported(mimeType string) bool {
 	return mimeType == "image/jpeg" || mimeType == "image/png"
+}
+
+type paddleServerOCRProgress struct {
+	progressCh   chan uint8
+	resultError  error
+	resultText   string
+	resultWaiter sync.WaitGroup
+}
+
+func (t *paddleServerOCRProgress) Completion() uint8 {
+	return 0
+}
+
+func (t *paddleServerOCRProgress) CompletionUpdates() chan uint8 {
+	return t.progressCh
+}
+
+func (t *paddleServerOCRProgress) Text() (string, error) {
+	t.resultWaiter.Wait()
+	return t.resultText, t.resultError
 }

@@ -1,14 +1,42 @@
 #if __FreeBSD__ >= 10
 #include "/usr/local/include/leptonica/allheaders.h"
-#include "/usr/local/include/tesseract/baseapi.h"
+#include "/usr/local/include/tesseract/ocrclass.h"
 #else
 #include <leptonica/allheaders.h>
 #include <tesseract/baseapi.h>
+#include <tesseract/ocrclass.h>
 #endif
 
 #include <stdio.h>
 #include <unistd.h>
 #include "tessbridge.h"
+
+struct tess_progress_handler* CreateTessProgressHandler(void) {
+    ETEXT_DESC *d = new ETEXT_DESC();
+    struct tess_progress_handler* handler;
+    handler = (tess_progress_handler*)malloc(sizeof(tess_progress_handler));
+    handler->d = (void*)d;
+
+    return handler;
+}
+void FreeTessProgressHandler(struct tess_progress_handler* handler) {
+    if (handler != nullptr) {
+        ETEXT_DESC *d = (ETEXT_DESC *)handler->d;
+        delete d;
+        free(handler);
+    }
+}
+int16_t GetTessProgress(struct tess_progress_handler* handler) {
+    if (handler != nullptr) {
+        ETEXT_DESC *d = (ETEXT_DESC *)handler->d;
+        return d->progress;
+    }   
+    return 0;
+}
+int8_t GetTessProgressErrorCode(struct tess_progress_handler* handler) {
+    ETEXT_DESC *d = (ETEXT_DESC *)handler->d;
+    return d->err_code;
+}
 
 TessBaseAPI Create() {
     tesseract::TessBaseAPI* api = new tesseract::TessBaseAPI();
@@ -103,6 +131,15 @@ char* UTF8Text(TessBaseAPI a) {
 char* HOCRText(TessBaseAPI a) {
     tesseract::TessBaseAPI* api = (tesseract::TessBaseAPI*)a;
     return api->GetHOCRText(0);
+}
+
+char* UTF8Recognize(TessBaseAPI a, struct tess_progress_handler* progress_handler) {
+    tesseract::TessBaseAPI* api = (tesseract::TessBaseAPI*)a;
+    ETEXT_DESC *d = (ETEXT_DESC *)progress_handler->d;
+    if (api->Recognize(d) != 0) {
+        return nullptr;
+    }
+    return api->GetUTF8Text();
 }
 
 bounding_boxes* GetBoundingBoxesVerbose(TessBaseAPI a) {

@@ -5,6 +5,15 @@ extern "C" {
 typedef void* TessBaseAPI;
 typedef void* PixImage;
 
+struct tess_progress_handler {
+    void* d;
+};
+
+struct tess_progress_handler* CreateTessProgressHandler(void);
+void FreeTessProgressHandler(struct tess_progress_handler*);
+int16_t GetTessProgress(struct tess_progress_handler*);
+int8_t GetTessProgressErrorCode(struct tess_progress_handler* handler);
+
 struct bounding_box {
     int x1, y1, x2, y2;
     char* word;
@@ -30,6 +39,7 @@ void SetPixImage(TessBaseAPI a, PixImage pix);
 void SetPageSegMode(TessBaseAPI, int);
 int GetPageSegMode(TessBaseAPI);
 char* UTF8Text(TessBaseAPI);
+char* UTF8Recognize(TessBaseAPI a, struct tess_progress_handler* progress_handler);
 char* HOCRText(TessBaseAPI);
 const char* Version(TessBaseAPI);
 const char* GetDataPath();

@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sync"
+	"sync/atomic"
 
 	"github.com/opengs/file2llm/ocr/gosseract"
 	"github.com/opengs/file2llm/parser/bgra"
@@ -34,13 +35,13 @@ func NewTesseract(config TesseractConfig) *Tesseract {
 }
 
 func (p *Tesseract) OCR(ctx context.Context, image io.Reader) (string, error) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
 	imageBytes, err := io.ReadAll(image)
 	if err != nil {
 		return "", errors.Join(errors.New("failed to read image bytes"), err)
 	}
+
+	p.lock.Lock()
+	defer p.lock.Unlock()
 
 	if bytes.HasPrefix(imageBytes, bgra.RAWBGRA_HEADER) {
 		img, err := bgra.ReadRAWBGRAImageFromBytes(imageBytes)
@@ -63,6 +64,65 @@ func (p *Tesseract) OCR(ctx context.Context, image io.Reader) (string, error) {
 	}
 
 	return result, nil
+}
+
+func (p *Tesseract) OCRWithProgress(ctx context.Context, image io.Reader) OCRProgress {
+	progress := &tesseractOCRProgress{
+		progressCh: make(chan uint8, 1),
+	}
+	progress.resultWaiter.Add(1)
+
+	go func() {
+		defer progress.resultWaiter.Done()
+		defer close(progress.progressCh)
+
+		imageBytes, err := io.ReadAll(image)
+		if err != nil {
+			progress.resultError = errors.Join(errors.New("failed to read image bytes"), err)
+			return
+		}
+
+		p.lock.Lock()
+		defer p.lock.Unlock()
+
+		if bytes.HasPrefix(imageBytes, bgra.RAWBGRA_HEADER) {
+			img, err := bgra.ReadRAWBGRAImageFromBytes(imageBytes)
+			if err != nil {
+				progress.resultError = errors.Join(errors.New("failed to read bgra raw image data"), err)
+				return
+			}
+			rgbaImage := img.ConvertBGRAtoRGBAInplace()
+			if err := p.client.SetImageFromRGBAImage(rgbaImage); err != nil {
+				progress.resultError = errors.Join(errors.New("failed to prepare image for OCR"), err)
+				return
+			}
+
+		} else {
+			if err := p.client.SetImageFromBytes(imageBytes); err != nil {
+				progress.resultError = errors.Join(errors.New("failed to prepare image for OCR"), err)
+				return
+			}
+		}
+
+		job, err := p.client.Recognize()
+		if err != nil {
+			progress.resultError = errors.Join(errors.New("failed to start OCR regognition"), err)
+			return
+		}
+
+		for newCompletion := range job.Progress {
+			progress.lastCompletion.Store(uint32(newCompletion))
+			select {
+			case progress.progressCh <- newCompletion:
+			default:
+			}
+		}
+
+		progress.resultError = job.Error
+		progress.resultText = job.Result
+	}()
+
+	return progress
 }
 
 func (p *Tesseract) Init() error {
@@ -183,4 +243,25 @@ func (p *Tesseract) downloadModel(language string) error {
 
 func (p *Tesseract) IsMimeTypeSupported(mimeType string) bool {
 	return slices.Contains(p.config.SupportedImageFormats, mimeType) || mimeType == "image/file2llm-raw-bgra"
+}
+
+type tesseractOCRProgress struct {
+	progressCh     chan uint8
+	lastCompletion atomic.Uint32
+	resultError    error
+	resultText     string
+	resultWaiter   sync.WaitGroup
+}
+
+func (t *tesseractOCRProgress) Completion() uint8 {
+	return uint8(t.lastCompletion.Load())
+}
+
+func (t *tesseractOCRProgress) CompletionUpdates() chan uint8 {
+	return t.progressCh
+}
+
+func (t *tesseractOCRProgress) Text() (string, error) {
+	t.resultWaiter.Wait()
+	return t.resultText, t.resultError
 }

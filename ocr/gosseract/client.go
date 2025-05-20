@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 	"unsafe"
 )
 
@@ -385,6 +386,58 @@ func (client *Client) Text() (out string, err error) {
 		out = strings.Trim(out, "\n")
 	}
 	return out, err
+}
+
+type RecognizeJob struct {
+	Progress chan uint8
+	Result   string
+	Error    error
+}
+
+func (client *Client) Recognize() (*RecognizeJob, error) {
+	if client.api == nil {
+		return nil, ErrClientNotConstructed
+	}
+	if err := client.init(); err != nil {
+		return nil, err
+	}
+	progress := C.CreateTessProgressHandler()
+
+	job := &RecognizeJob{
+		Progress: make(chan uint8, 1),
+	}
+	recognitionCompleted := make(chan struct{})
+
+	go func() {
+		defer close(recognitionCompleted)
+		cResult := C.UTF8Recognize(client.api, progress)
+		if cResult == nil {
+			errorCodeC := C.GetTessProgressErrorCode(progress)
+			job.Error = fmt.Errorf("error during recognition: code %d", int8(errorCodeC))
+			return
+		}
+		job.Result = C.GoString(cResult)
+	}()
+
+	go func() {
+		defer C.FreeTessProgressHandler(progress)
+		defer close(job.Progress)
+
+		for {
+			select {
+			case <-time.After(time.Second * 1):
+				completion := uint8(int16(C.GetTessProgress(progress)))
+				select {
+				case job.Progress <- completion:
+				default:
+				}
+			case <-recognitionCompleted:
+				return
+			}
+		}
+	}()
+
+	return job, nil
 }
 
 // HOCRText finally initialize tesseract::TessBaseAPI, execute OCR and returns hOCR text.

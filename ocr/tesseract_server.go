@@ -9,6 +9,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"sync"
 )
 
 type TesseractServerConfig struct {
@@ -113,6 +114,41 @@ func (p *TesseractServer) OCR(ctx context.Context, image io.Reader) (string, err
 	return responseData.Data.StdOut, nil
 }
 
+func (p *TesseractServer) OCRWithProgress(ctx context.Context, image io.Reader) OCRProgress {
+	progress := &tesseractServerOCRProgress{
+		progressCh: make(chan uint8, 1),
+	}
+	progress.resultWaiter.Add(1)
+
+	go func() {
+		defer progress.resultWaiter.Done()
+		defer close(progress.progressCh)
+		progress.resultText, progress.resultError = p.OCR(ctx, image)
+	}()
+
+	return progress
+}
+
 func (p *TesseractServer) IsMimeTypeSupported(mimeType string) bool {
 	return mimeType == "image/jpeg" || mimeType == "image/png"
+}
+
+type tesseractServerOCRProgress struct {
+	progressCh   chan uint8
+	resultError  error
+	resultText   string
+	resultWaiter sync.WaitGroup
+}
+
+func (t *tesseractServerOCRProgress) Completion() uint8 {
+	return 0
+}
+
+func (t *tesseractServerOCRProgress) CompletionUpdates() chan uint8 {
+	return t.progressCh
+}
+
+func (t *tesseractServerOCRProgress) Text() (string, error) {
+	t.resultWaiter.Wait()
+	return t.resultText, t.resultError
 }

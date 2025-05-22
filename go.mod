@@ -37,6 +37,7 @@ require (
 )
 
 require (
+	github.com/emersion/go-message v0.18.2
 	github.com/gin-gonic/gin v1.10.0
 	github.com/spf13/cobra v1.9.1
 	golang.org/x/net v0.39.0 // indirect

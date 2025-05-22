@@ -13,7 +13,7 @@ import (
 func TestPDF(t *testing.T) {
 	ocrProvider := ocr.NewTestingOCRProvider(t)
 	pdfParser := NewPDFParser(New(ocrProvider))
-	result := pdfParser.Parse(context.Background(), bytes.NewReader(testdata.PDF))
+	result := pdfParser.Parse(context.Background(), bytes.NewReader(testdata.PDF), "")
 	if result.Error() != nil {
 		t.Error(result.Error())
 		return

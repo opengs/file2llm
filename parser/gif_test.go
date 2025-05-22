@@ -13,7 +13,7 @@ import (
 func TestGIF(t *testing.T) {
 	ocrProvider := ocr.NewTestingOCRProvider(t)
 	gifParser := NewGIFParser(ocrProvider)
-	result := gifParser.Parse(context.Background(), bytes.NewReader(testdata.GIF))
+	result := gifParser.Parse(context.Background(), bytes.NewReader(testdata.GIF), "")
 	if result.Error() != nil {
 		t.Error(result.Error())
 		return

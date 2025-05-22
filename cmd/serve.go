@@ -51,7 +51,7 @@ var serveCMD = &cobra.Command{
 
 		ginEngine := gin.Default()
 		ginEngine.POST("/file", func(ctx *gin.Context) {
-			result := fileParser.Parse(ctx.Request.Context(), ctx.Request.Body)
+			result := fileParser.Parse(ctx.Request.Context(), ctx.Request.Body, "")
 			ctx.JSON(http.StatusOK, gin.H{
 				"text": result.String(),
 				"raw":  result,

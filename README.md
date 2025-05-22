@@ -12,6 +12,7 @@
   <img alt="application/vnd.oasis.opendocument.text" src="https://img.shields.io/badge/ODT-gray?style=for-the-badge">
   <img alt="application/vnd.apple.pages" src="https://img.shields.io/badge/PAGES-gray?style=for-the-badge">
   <img alt="application/rtf" src="https://img.shields.io/badge/RTF-gray?style=for-the-badge">
+  <img alt="message/rfc822" src="https://img.shields.io/badge/EML-lightgray?style=for-the-badge">
   <br>
   <img alt="image/png" src="https://img.shields.io/badge/PNG-lightgray?style=for-the-badge">
   <img alt="image/jpeg" src="https://img.shields.io/badge/JPEG-lightgray?style=for-the-badge">
@@ -24,7 +25,7 @@
   <img alt="application/vnd.rar" src="https://img.shields.io/badge/RAR-gray?style=for-the-badge">
   <img alt="application/x-7z-compressed" src="https://img.shields.io/badge/7Z-gray?style=for-the-badge">
   <img alt="application/gzip" src="https://img.shields.io/badge/GZ-gray?style=for-the-badge">
-  <img alt="application/tar" src="https://img.shields.io/badge/TAR-gray?style=for-the-badge">
+  <img alt="application/tar" src="https://img.shields.io/badge/TAR-lightgray?style=for-the-badge">
   <img alt="application/x-bzip2" src="https://img.shields.io/badge/BZ2-gray?style=for-the-badge">
 </p>
 

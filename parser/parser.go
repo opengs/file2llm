@@ -24,18 +24,47 @@ func (e *ErrMimeTypeNotSupported) Error() string {
 type Parser interface {
 	// Returns list of supported mime types by this parser
 	SupportedMimeTypes() []string
-	// Parse file. Thread safe
-	Parse(ctx context.Context, file io.Reader) Result
+	// Parse file. Thread safe. Use path to track subfiles or use file name as hint for mime type detection.
+	Parse(ctx context.Context, file io.Reader, path string) Result
+	// Parse file. Thread safe. Use path to track subfiles or use file name as hint for mime type detection. Return chanel that streams results.
+	ParseStream(ctx context.Context, file io.Reader, path string) chan StreamResult
 }
 
 // Parsing result
 type Result interface {
+	// Get full path to the file
+	Path() string
 	// Convert entire result to LLM readable string
 	String() string
 	// Not empty if there where error
 	Error() error
-	// Parsed subcomponents. For example images in the PDF or files inside archives
-	Componets() []Result
+	// Parsed subfiles. For example files inside archives
+	Subfiles() []Result
+}
+
+type ParseProgressStage string
+
+const ProgressNew ParseProgressStage = "NEW"
+
+// Indicates that
+const ProgressUpdate ParseProgressStage = "UPDATE"
+
+// Raises on the end of file parsing
+const ProgressCompleted ParseProgressStage = "COMPLETED"
+
+type StreamResult interface {
+	// Get full path to the file
+	Path() string
+	// Current file processing progress
+	Stage() ParseProgressStage
+	// Progress in percents from 0 to 100
+	Progress() uint8
+	// Underlying result
+	SubResult() StreamResult
+	// Convert entire result to LLM readable string
+	String() string
+	// Not empty if there where error
+	Error() error
 }
 
 // Build parser with all possible file types included
@@ -54,5 +83,7 @@ func New(ocrProvider ocr.Provider) Parser {
 	}
 
 	composite.AddParsers(NewPDFParser(composite))
+	composite.AddParsers(NewTARParser(composite))
+	composite.AddParsers(NewEMLParser(composite))
 	return composite
 }

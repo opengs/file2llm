@@ -13,13 +13,38 @@ import (
 func TestPNG(t *testing.T) {
 	ocrProvider := ocr.NewTestingOCRProvider(t)
 	pngParser := NewPNGParser(ocrProvider)
-	result := pngParser.Parse(context.Background(), bytes.NewReader(testdata.PNG))
+	result := pngParser.Parse(context.Background(), bytes.NewReader(testdata.PNG), "")
 	if result.Error() != nil {
 		t.Error(result.Error())
 		return
 	}
 
 	resultString := result.String()
+	resultString = strings.ToLower(resultString)
+	if !strings.Contains(resultString, "hello") {
+		t.Fail()
+	}
+}
+
+func TestPNGStream(t *testing.T) {
+	ocrProvider := ocr.NewTestingOCRProvider(t)
+	pngParser := NewPNGParser(ocrProvider)
+
+	hasNewStage := false
+	hasCompletedStage := false
+	var lastResult StreamResult
+
+	parseProgress := pngParser.ParseStream(context.Background(), bytes.NewReader(testdata.PNG), "")
+	for progress := range parseProgress {
+		hasNewStage = hasNewStage || (progress.Stage() == ProgressNew)
+		hasCompletedStage = hasCompletedStage || (progress.Stage() == ProgressCompleted)
+		lastResult = progress
+	}
+	if !hasNewStage || !hasCompletedStage {
+		t.Fail()
+	}
+
+	resultString := lastResult.String()
 	resultString = strings.ToLower(resultString)
 	if !strings.Contains(resultString, "hello") {
 		t.Fail()

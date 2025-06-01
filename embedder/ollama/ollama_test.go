@@ -13,7 +13,7 @@ func TestOllama(t *testing.T) {
 		t.Skip("TEST_EMBEDDER_OLLAMA_BASEURL is not configured")
 	}
 
-	emb := New("all-minilm", WithBaseURL(ollamaBaseURL))
+	emb := New("all-minilm", WithBaseURL(ollamaBaseURL), WithDimensions(384))
 	if err := emb.PullModel(t.Context()); err != nil {
 		t.Error(err.Error())
 		return

@@ -8,6 +8,29 @@ on:
 jobs:
   test_all:
     runs-on: ubuntu-latest
+    services:
+      pgvector:
+        image: pgvector/pgvector:0.8.0-pg17
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      ollama:
+        image: ollama/ollama:0.6.6
+        ports:
+          - 11434:11434
+        options: >-
+          --health-cmd="curl -f http://localhost:11434/health || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -26,4 +49,7 @@ jobs:
         run: go mod download
 
       - name: Run Tests
+        env:
+          TEST_EMBEDDER_OLLAMA_BASEURL: http://ollama:11434/api
+          TEST_STORAGE_PGVECTOR_DBURL: postgresql://postgres:postgres@pgvector:5432/postgres
         run: go test --tags=file2llm_feature_tesseract,file2llm_feature_pdf,test ./...

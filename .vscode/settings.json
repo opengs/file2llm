@@ -4,5 +4,6 @@
     },
     "go.testFlags": [
       "-tags=test"
-    ]
+    ],
+    "go.testEnvFile": "${workspaceFolder}/.env"
   }

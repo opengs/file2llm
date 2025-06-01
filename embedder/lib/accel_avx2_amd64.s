@@ -1,0 +1,172 @@
+#include "textflag.h"
+
+DATA dataNormF32<>+0(SB)/4, $0xc0400000
+DATA dataNormF32<>+4(SB)/4, $0xbf000000
+DATA dataNormF32<>+8(SB)/4, $0x7fffffff
+DATA dataNormF32<>+12(SB)/4, $0x00800000
+GLOBL dataNormF32<>(SB), RODATA|NOPTR, $16
+
+// func norm_AVX2_F32(x []float32) float32
+// Requires: AVX, FMA3, SSE
+TEXT ·norm_AVX2_F32(SB), NOSPLIT, $0-28
+	MOVQ   x_base+0(FP), DI
+	MOVQ   x_len+8(FP), SI
+	TESTQ  SI, SI
+	JE     LBB3_1
+	CMPQ   SI, $0x20
+	JAE    LBB3_4
+	VXORPS X0, X0, X0
+	XORL   AX, AX
+	JMP    LBB3_11
+
+LBB3_1:
+	VXORPS X0, X0, X0
+	JMP    LBB3_12
+
+LBB3_4:
+	MOVQ   SI, AX
+	ANDQ   $-32, AX
+	LEAQ   -32(AX), CX
+	MOVQ   CX, R8
+	SHRQ   $0x05, R8
+	ADDQ   $0x01, R8
+	TESTQ  CX, CX
+	JE     LBB3_5
+	MOVQ   R8, CX
+	ANDQ   $-2, CX
+	VXORPS X0, X0, X0
+	XORL   DX, DX
+	VXORPS X1, X1, X1
+	VXORPS X2, X2, X2
+	VXORPS X3, X3, X3
+
+LBB3_7:
+	VMOVUPS     (DI)(DX*4), Y4
+	VMOVUPS     32(DI)(DX*4), Y5
+	VMOVUPS     64(DI)(DX*4), Y6
+	VMOVUPS     96(DI)(DX*4), Y7
+	VFMADD213PS Y0, Y4, Y4
+	VFMADD213PS Y1, Y5, Y5
+	VFMADD213PS Y2, Y6, Y6
+	VFMADD213PS Y3, Y7, Y7
+	VMOVUPS     128(DI)(DX*4), Y0
+	VMOVUPS     160(DI)(DX*4), Y1
+	VMOVUPS     192(DI)(DX*4), Y2
+	VMOVUPS     224(DI)(DX*4), Y3
+	VFMADD213PS Y4, Y0, Y0
+	VFMADD213PS Y5, Y1, Y1
+	VFMADD213PS Y6, Y2, Y2
+	VFMADD213PS Y7, Y3, Y3
+	ADDQ        $0x40, DX
+	ADDQ        $-2, CX
+	JNE         LBB3_7
+	TESTB       $0x01, R8
+	JE          LBB3_10
+
+LBB3_9:
+	VMOVUPS     (DI)(DX*4), Y4
+	VMOVUPS     32(DI)(DX*4), Y5
+	VMOVUPS     64(DI)(DX*4), Y6
+	VMOVUPS     96(DI)(DX*4), Y7
+	VFMADD231PS Y4, Y4, Y0
+	VFMADD231PS Y5, Y5, Y1
+	VFMADD231PS Y6, Y6, Y2
+	VFMADD231PS Y7, Y7, Y3
+
+LBB3_10:
+	VADDPS       Y3, Y1, Y1
+	VADDPS       Y2, Y0, Y0
+	VADDPS       Y1, Y0, Y0
+	VEXTRACTF128 $0x01, Y0, X1
+	VADDPS       X1, X0, X0
+	VPERMILPD    $0x01, X0, X1
+	VADDPS       X1, X0, X0
+	VMOVSHDUP    X0, X1
+	VADDSS       X1, X0, X0
+	CMPQ         AX, SI
+	JE           LBB3_12
+
+LBB3_11:
+	VMOVSS      (DI)(AX*4), X1
+	VFMADD231SS X1, X1, X0
+	ADDQ        $0x01, AX
+	CMPQ        SI, AX
+	JNE         LBB3_11
+
+LBB3_12:
+	VRSQRTSS     X0, X0, X1
+	VMULSS       X1, X0, X2
+	VFMADD213SS  dataNormF32<>+0(SB), X2, X1
+	VMULSS       dataNormF32<>+4(SB), X2, X2
+	VMULSS       X1, X2, X1
+	VBROADCASTSS dataNormF32<>+8(SB), X2
+	VANDPS       X2, X0, X0
+	VCMPSS       $0x01, dataNormF32<>+12(SB), X0, X0
+	VANDNPS      X1, X0, X0
+	VZEROUPPER
+	MOVSS        X0, ret+24(FP)
+	RET
+
+LBB3_5:
+	VXORPS X0, X0, X0
+	XORL   DX, DX
+	VXORPS X1, X1, X1
+	VXORPS X2, X2, X2
+	VXORPS X3, X3, X3
+	TESTB  $0x01, R8
+	JNE    LBB3_9
+	JMP    LBB3_10
+
+DATA dataDivNumberF32<>+0(SB)/4, $0x3f800000
+GLOBL dataDivNumberF32<>(SB), RODATA|NOPTR, $4
+
+// func divNumber_AVX2_F32(x []float32, a float32)
+// Requires: AVX, AVX2, SSE
+TEXT ·divNumber_AVX2_F32(SB), NOSPLIT, $0-28
+	MOVQ  x_base+0(FP), DI
+	MOVSS a+24(FP), X0
+	MOVQ  x_len+8(FP), SI
+	TESTQ SI, SI
+	JE    LBB15_8
+	CMPQ  SI, $0x20
+	JAE   LBB15_3
+	XORL  AX, AX
+	JMP   LBB15_6
+
+LBB15_3:
+	MOVQ         SI, AX
+	ANDQ         $-32, AX
+	VMOVSS       dataDivNumberF32<>+0(SB), X1
+	VDIVSS       X0, X1, X1
+	VBROADCASTSS X1, Y1
+	XORL         CX, CX
+
+LBB15_4:
+	VMULPS  (DI)(CX*4), Y1, Y2
+	VMULPS  32(DI)(CX*4), Y1, Y3
+	VMULPS  64(DI)(CX*4), Y1, Y4
+	VMULPS  96(DI)(CX*4), Y1, Y5
+	VMOVUPS Y2, (DI)(CX*4)
+	VMOVUPS Y3, 32(DI)(CX*4)
+	VMOVUPS Y4, 64(DI)(CX*4)
+	VMOVUPS Y5, 96(DI)(CX*4)
+	ADDQ    $0x20, CX
+	CMPQ    AX, CX
+	JNE     LBB15_4
+	CMPQ    AX, SI
+	JE      LBB15_8
+
+LBB15_6:
+	VMOVSS dataDivNumberF32<>+0(SB), X1
+	VDIVSS X0, X1, X0
+
+LBB15_7:
+	VMULSS (DI)(AX*4), X0, X1
+	VMOVSS X1, (DI)(AX*4)
+	ADDQ   $0x01, AX
+	CMPQ   SI, AX
+	JNE    LBB15_7
+
+LBB15_8:
+	VZEROUPPER
+	RET

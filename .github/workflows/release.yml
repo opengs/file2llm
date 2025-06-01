@@ -2,7 +2,6 @@ name: Release new version
 
 permissions:
   contents: write
-  packages: write
 
 on:
   push:
@@ -14,14 +13,9 @@ jobs:
     name: Test
     uses: ./.github/workflows/test.yml
 
-  release-docker-images:
-    needs: [tests]
-    name: Release Docker Images
-    uses: ./.github/workflows/build-docker.yml
-
   release:
     name: Create Release
-    needs: [release-docker-images]
+    needs: [tests]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

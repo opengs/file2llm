@@ -12,7 +12,7 @@
 #include "tessbridge.h"
 
 struct tess_progress_handler* CreateTessProgressHandler(void) {
-    ETEXT_DESC *d = new ETEXT_DESC();
+    tesseract::ETEXT_DESC *d = new tesseract::ETEXT_DESC();
     struct tess_progress_handler* handler;
     handler = (tess_progress_handler*)malloc(sizeof(tess_progress_handler));
     handler->d = (void*)d;
@@ -21,20 +21,20 @@ struct tess_progress_handler* CreateTessProgressHandler(void) {
 }
 void FreeTessProgressHandler(struct tess_progress_handler* handler) {
     if (handler != nullptr) {
-        ETEXT_DESC *d = (ETEXT_DESC *)handler->d;
+        tesseract::ETEXT_DESC *d = (tesseract::ETEXT_DESC *)handler->d;
         delete d;
         free(handler);
     }
 }
 int16_t GetTessProgress(struct tess_progress_handler* handler) {
     if (handler != nullptr) {
-        ETEXT_DESC *d = (ETEXT_DESC *)handler->d;
+        tesseract::ETEXT_DESC *d = (tesseract::ETEXT_DESC *)handler->d;
         return d->progress;
     }   
     return 0;
 }
 int8_t GetTessProgressErrorCode(struct tess_progress_handler* handler) {
-    ETEXT_DESC *d = (ETEXT_DESC *)handler->d;
+    tesseract::ETEXT_DESC *d = (tesseract::ETEXT_DESC *)handler->d;
     return d->err_code;
 }
 
@@ -135,7 +135,7 @@ char* HOCRText(TessBaseAPI a) {
 
 char* UTF8Recognize(TessBaseAPI a, struct tess_progress_handler* progress_handler) {
     tesseract::TessBaseAPI* api = (tesseract::TessBaseAPI*)a;
-    ETEXT_DESC *d = (ETEXT_DESC *)progress_handler->d;
+    tesseract::ETEXT_DESC *d = (tesseract::ETEXT_DESC *)progress_handler->d;
     if (api->Recognize(d) != 0) {
         return nullptr;
     }

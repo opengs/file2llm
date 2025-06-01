@@ -31,6 +31,7 @@ func (f *FS) UUID() string {
 
 func (f *FS) Open() (source.Iterator, error) {
 	return &fsIterator{
+		fs:     f.fs,
 		walker: newWalker(f.fs, f.path),
 	}, nil
 }

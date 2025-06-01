@@ -33,7 +33,7 @@ func TestFS_OpenAndIterateFiles(t *testing.T) {
 			Mode:    0644,
 			ModTime: time.Date(2024, 5, 2, 12, 0, 0, 0, time.UTC),
 		},
-		"dir/": &fstest.MapFile{
+		"dir": &fstest.MapFile{
 			Mode: fs.ModeDir,
 		},
 	}

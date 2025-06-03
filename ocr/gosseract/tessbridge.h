@@ -11,8 +11,8 @@ struct tess_progress_handler {
 
 struct tess_progress_handler* CreateTessProgressHandler(void);
 void FreeTessProgressHandler(struct tess_progress_handler*);
-int16_t GetTessProgress(struct tess_progress_handler*);
-int8_t GetTessProgressErrorCode(struct tess_progress_handler* handler);
+int GetTessProgress(struct tess_progress_handler*);
+int GetTessProgressErrorCode(struct tess_progress_handler* handler);
 
 struct bounding_box {
     int x1, y1, x2, y2;

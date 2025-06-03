@@ -7,6 +7,7 @@
 #include <tesseract/ocrclass.h>
 #endif
 
+//#include <stdint.h> // Must be included when buildng for MUSL (alpine linux)
 #include <stdio.h>
 #include <unistd.h>
 #include "tessbridge.h"
@@ -26,16 +27,16 @@ void FreeTessProgressHandler(struct tess_progress_handler* handler) {
         free(handler);
     }
 }
-int16_t GetTessProgress(struct tess_progress_handler* handler) {
+int GetTessProgress(struct tess_progress_handler* handler) {
     if (handler != nullptr) {
         tesseract::ETEXT_DESC *d = (tesseract::ETEXT_DESC *)handler->d;
-        return d->progress;
+        return int(d->progress);
     }   
     return 0;
 }
-int8_t GetTessProgressErrorCode(struct tess_progress_handler* handler) {
+int GetTessProgressErrorCode(struct tess_progress_handler* handler) {
     tesseract::ETEXT_DESC *d = (tesseract::ETEXT_DESC *)handler->d;
-    return d->err_code;
+    return int(d->err_code);
 }
 
 TessBaseAPI Create() {

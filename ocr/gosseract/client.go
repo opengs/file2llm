@@ -413,7 +413,7 @@ func (client *Client) Recognize() (*RecognizeJob, error) {
 		cResult := C.UTF8Recognize(client.api, progress)
 		if cResult == nil {
 			errorCodeC := C.GetTessProgressErrorCode(progress)
-			job.Error = fmt.Errorf("error during recognition: code %d", int8(errorCodeC))
+			job.Error = fmt.Errorf("error during recognition: code %d", int8(int(errorCodeC)))
 			return
 		}
 		job.Result = C.GoString(cResult)
@@ -426,7 +426,7 @@ func (client *Client) Recognize() (*RecognizeJob, error) {
 		for {
 			select {
 			case <-time.After(time.Second * 1):
-				completion := uint8(int16(C.GetTessProgress(progress)))
+				completion := uint8(int(C.GetTessProgress(progress)))
 				select {
 				case job.Progress <- completion:
 				default:

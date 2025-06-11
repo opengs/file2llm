@@ -86,7 +86,7 @@ func (p *PDFParser) Parse(ctx context.Context, file io.Reader, path string) Resu
 		}
 		pageResult := PDFParserResultPage{}
 
-		dpi := 200.0 // Good for ocr
+		dpi := 300.0 // Good for ocr
 		scale := dpi / 72.0
 
 		var w, h C.double
@@ -185,7 +185,7 @@ func (p *PDFParser) ParseStream(ctx context.Context, file io.Reader, path string
 			}
 			pageResult := PDFParserStreamResultPage{}
 
-			dpi := 200.0 // Good for ocr
+			dpi := 300.0 // Good for ocr
 			scale := dpi / 72.0
 
 			var w, h C.double

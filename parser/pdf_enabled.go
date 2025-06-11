@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	pathlib "path"
 	"strings"
 	"unsafe"
 
@@ -87,56 +86,38 @@ func (p *PDFParser) Parse(ctx context.Context, file io.Reader, path string) Resu
 		}
 		pageResult := PDFParserResultPage{}
 
-		// Get all the text from the page
-		textC := C.poppler_page_get_text(page)
-		if unsafe.Pointer(textC) != nil {
-			text := C.GoString(textC)
-			pageResult.Text = text
-			C.g_free(C.gpointer(textC))
-		}
+		var width, height C.double
+		C.poppler_page_get_size(page, &width, &height)
 
-		// Get all the images on the page
-		var pageImages []Result
-		imageMappingList := C.poppler_page_get_image_mapping(page)
-		if imageMappingList != nil {
-			for l := imageMappingList; l != nil; l = l.next {
-				mapping := (*C.PopplerImageMapping)(l.data)
-				cImage := C.poppler_page_get_image(page, mapping.image_id)
-				if cImage == nil {
-					continue
-				}
+		surface := C.cairo_image_surface_create(C.CAIRO_FORMAT_ARGB32, C.int(int(width)), C.int(int(height)))
 
-				format := C.cairo_image_surface_get_format(cImage)
-				if format != C.CAIRO_FORMAT_ARGB32 && format != C.CAIRO_FORMAT_RGB24 {
-					C.cairo_surface_destroy(cImage)
-					continue
-				}
+		cr := C.cairo_create(surface)
 
-				width := int(C.cairo_image_surface_get_width(cImage))
-				height := int(C.cairo_image_surface_get_height(cImage))
-				stride := int(C.cairo_image_surface_get_stride(cImage))
-				data := C.cairo_image_surface_get_data(cImage)
+		C.cairo_set_source_rgb(cr, 1.0, 1.0, 1.0)
+		C.cairo_paint(cr)
 
-				bufSize := height * stride
-				buf := C.GoBytes(unsafe.Pointer(data), C.int(bufSize))
-				C.cairo_surface_destroy(cImage)
+		C.poppler_page_render(page, cr)
+		imgWidth := int(C.cairo_image_surface_get_width(surface))
+		imgHeight := int(C.cairo_image_surface_get_height(surface))
+		imgStride := int(C.cairo_image_surface_get_stride(surface))
+		imgData := C.cairo_image_surface_get_data(surface)
+		bufSize := imgHeight * imgStride
+		buf := C.GoBytes(unsafe.Pointer(imgData), C.int(bufSize))
+		C.cairo_destroy(cr)
+		C.cairo_surface_destroy(surface)
 
-				sizes := make([]byte, 8+8+8)
-				binary.BigEndian.PutUint64(sizes, uint64(width))
-				binary.BigEndian.PutUint64(sizes[8:], uint64(height))
-				binary.BigEndian.PutUint64(sizes[16:], uint64(stride))
-				rgbaStream := io.MultiReader(
-					bytes.NewBuffer(bgra.RAWBGRA_HEADER),
-					bytes.NewBuffer(sizes),
-					bytes.NewBuffer(buf),
-				)
+		sizes := make([]byte, 8+8+8)
+		binary.BigEndian.PutUint64(sizes, uint64(imgWidth))
+		binary.BigEndian.PutUint64(sizes[8:], uint64(imgHeight))
+		binary.BigEndian.PutUint64(sizes[16:], uint64(imgStride))
+		rgbaStream := io.MultiReader(
+			bytes.NewBuffer(bgra.RAWBGRA_HEADER),
+			bytes.NewBuffer(sizes),
+			bytes.NewBuffer(buf),
+		)
 
-				imageResult := p.innerParser.Parse(ctx, rgbaStream, "")
-				pageImages = append(pageImages, imageResult)
-			}
-			C.poppler_page_free_image_mapping(imageMappingList)
-		}
-		pageResult.Images = pageImages
+		imageResult := p.innerParser.Parse(ctx, rgbaStream, "")
+		pageResult.Text = imageResult.String()
 
 		C.g_object_unref(C.gpointer(page))
 		pages = append(pages, pageResult)
@@ -145,6 +126,110 @@ func (p *PDFParser) Parse(ctx context.Context, file io.Reader, path string) Resu
 	return &PDFParserResult{Pages: pages, Metadata: meta}
 }
 
+/*
+	func (p *PDFParser) Parse(ctx context.Context, file io.Reader, path string) Result {
+		pdfData, err := io.ReadAll(file)
+		if err != nil {
+			return &PDFParserResult{Err: errors.Join(errors.New("failed to read data to the bytes buffer"), err)}
+		}
+
+		gbytes := C.g_bytes_new(C.gconstpointer(unsafe.Pointer(&pdfData[0])), C.size_t(len(pdfData)))
+		if gbytes == nil {
+			return &PDFParserResult{Err: errors.New("failed to create GBytes")}
+		}
+		defer C.g_bytes_unref(gbytes)
+
+		var gErr *C.GError
+		doc := C.poppler_document_new_from_bytes(gbytes, nil, &gErr)
+		if doc == nil {
+			if gErr != nil {
+				defer C.g_error_free(gErr)
+				return &PDFParserResult{
+					Err: errors.Join(ErrBadFile, errors.New(C.GoString((*C.char)(gErr.message)))),
+				}
+			}
+			return &PDFParserResult{
+				Err: errors.New("unknown error while reading PDF document"),
+			}
+		}
+		defer C.g_object_unref(C.gpointer(doc))
+
+		// Get the metadata
+		var meta string
+		metaCStr := C.poppler_document_get_metadata(doc)
+		if metaCStr != nil {
+			meta = C.GoString(metaCStr)
+			C.g_free(C.gpointer(metaCStr))
+		}
+
+		var pages []PDFParserResultPage
+
+		n_pages := int(C.poppler_document_get_n_pages(doc))
+		for pageIndex := range n_pages {
+			page := C.poppler_document_get_page(doc, C.int(pageIndex))
+			if page == nil {
+				continue
+			}
+			pageResult := PDFParserResultPage{}
+
+			// Get all the text from the page
+			textC := C.poppler_page_get_text(page)
+			if unsafe.Pointer(textC) != nil {
+				text := C.GoString(textC)
+				pageResult.Text = text
+				C.g_free(C.gpointer(textC))
+			}
+
+			// Get all the images on the page
+			var pageImages []Result
+			imageMappingList := C.poppler_page_get_image_mapping(page)
+			if imageMappingList != nil {
+				for l := imageMappingList; l != nil; l = l.next {
+					mapping := (*C.PopplerImageMapping)(l.data)
+					cImage := C.poppler_page_get_image(page, mapping.image_id)
+					if cImage == nil {
+						continue
+					}
+
+					format := C.cairo_image_surface_get_format(cImage)
+					if format != C.CAIRO_FORMAT_ARGB32 && format != C.CAIRO_FORMAT_RGB24 {
+						C.cairo_surface_destroy(cImage)
+						continue
+					}
+
+					width := int(C.cairo_image_surface_get_width(cImage))
+					height := int(C.cairo_image_surface_get_height(cImage))
+					stride := int(C.cairo_image_surface_get_stride(cImage))
+					data := C.cairo_image_surface_get_data(cImage)
+
+					bufSize := height * stride
+					buf := C.GoBytes(unsafe.Pointer(data), C.int(bufSize))
+					C.cairo_surface_destroy(cImage)
+
+					sizes := make([]byte, 8+8+8)
+					binary.BigEndian.PutUint64(sizes, uint64(width))
+					binary.BigEndian.PutUint64(sizes[8:], uint64(height))
+					binary.BigEndian.PutUint64(sizes[16:], uint64(stride))
+					rgbaStream := io.MultiReader(
+						bytes.NewBuffer(bgra.RAWBGRA_HEADER),
+						bytes.NewBuffer(sizes),
+						bytes.NewBuffer(buf),
+					)
+
+					imageResult := p.innerParser.Parse(ctx, rgbaStream, "")
+					pageImages = append(pageImages, imageResult)
+				}
+				C.poppler_page_free_image_mapping(imageMappingList)
+			}
+			pageResult.Images = pageImages
+
+			C.g_object_unref(C.gpointer(page))
+			pages = append(pages, pageResult)
+		}
+
+		return &PDFParserResult{Pages: pages, Metadata: meta}
+	}
+*/
 func (p *PDFParser) ParseStream(ctx context.Context, file io.Reader, path string) chan StreamResult {
 	resultChan := make(chan StreamResult)
 	go func() {
@@ -198,64 +283,38 @@ func (p *PDFParser) ParseStream(ctx context.Context, file io.Reader, path string
 			}
 			pageResult := PDFParserStreamResultPage{}
 
-			// Get all the text from the page
-			textC := C.poppler_page_get_text(page)
-			if unsafe.Pointer(textC) != nil {
-				text := C.GoString(textC)
-				pageResult.Text = text
-				C.g_free(C.gpointer(textC))
-			}
+			var width, height C.double
+			C.poppler_page_get_size(page, &width, &height)
 
-			// Get all the images on the page
-			var pageImages []StreamResult
-			imageMappingList := C.poppler_page_get_image_mapping(page)
-			if imageMappingList != nil {
-				for l := imageMappingList; l != nil; l = l.next {
-					mapping := (*C.PopplerImageMapping)(l.data)
-					cImage := C.poppler_page_get_image(page, mapping.image_id)
-					if cImage == nil {
-						continue
-					}
+			surface := C.cairo_image_surface_create(C.CAIRO_FORMAT_ARGB32, C.int(int(width)), C.int(int(height)))
 
-					format := C.cairo_image_surface_get_format(cImage)
-					if format != C.CAIRO_FORMAT_ARGB32 && format != C.CAIRO_FORMAT_RGB24 {
-						C.cairo_surface_destroy(cImage)
-						continue
-					}
+			cr := C.cairo_create(surface)
 
-					width := int(C.cairo_image_surface_get_width(cImage))
-					height := int(C.cairo_image_surface_get_height(cImage))
-					stride := int(C.cairo_image_surface_get_stride(cImage))
-					data := C.cairo_image_surface_get_data(cImage)
+			C.cairo_set_source_rgb(cr, 1.0, 1.0, 1.0)
+			C.cairo_paint(cr)
 
-					bufSize := height * stride
-					buf := C.GoBytes(unsafe.Pointer(data), C.int(bufSize))
-					C.cairo_surface_destroy(cImage)
+			C.poppler_page_render(page, cr)
+			imgWidth := int(C.cairo_image_surface_get_width(surface))
+			imgHeight := int(C.cairo_image_surface_get_height(surface))
+			imgStride := int(C.cairo_image_surface_get_stride(surface))
+			imgData := C.cairo_image_surface_get_data(surface)
+			bufSize := imgHeight * imgStride
+			buf := C.GoBytes(unsafe.Pointer(imgData), C.int(bufSize))
+			C.cairo_destroy(cr)
+			C.cairo_surface_destroy(surface)
 
-					sizes := make([]byte, 8+8+8)
-					binary.BigEndian.PutUint64(sizes, uint64(width))
-					binary.BigEndian.PutUint64(sizes[8:], uint64(height))
-					binary.BigEndian.PutUint64(sizes[16:], uint64(stride))
-					rgbaStream := io.MultiReader(
-						bytes.NewBuffer(bgra.RAWBGRA_HEADER),
-						bytes.NewBuffer(sizes),
-						bytes.NewBuffer(buf),
-					)
+			sizes := make([]byte, 8+8+8)
+			binary.BigEndian.PutUint64(sizes, uint64(imgWidth))
+			binary.BigEndian.PutUint64(sizes[8:], uint64(imgHeight))
+			binary.BigEndian.PutUint64(sizes[16:], uint64(imgStride))
+			rgbaStream := io.MultiReader(
+				bytes.NewBuffer(bgra.RAWBGRA_HEADER),
+				bytes.NewBuffer(sizes),
+				bytes.NewBuffer(buf),
+			)
 
-					var lastResult StreamResult
-					parseProgress := p.innerParser.ParseStream(ctx, rgbaStream, pathlib.Join(path, fmt.Sprintf("image_%d_%d", int(pageIndex), len(pageImages))))
-					for progress := range parseProgress {
-						lastResult = progress
-						resultChan <- &PDFParserStreamResult{FullPath: path, CurrentStage: ProgressUpdate, CurrentProgress: percentageDone, Subfile: progress}
-					}
-
-					if lastResult.Error() == nil {
-						pageImages = append(pageImages, lastResult)
-					}
-				}
-				C.poppler_page_free_image_mapping(imageMappingList)
-			}
-			pageResult.Images = pageImages
+			imageResult := p.innerParser.Parse(ctx, rgbaStream, "")
+			pageResult.Text = imageResult.String()
 
 			C.g_object_unref(C.gpointer(page))
 			pages = append(pages, pageResult)

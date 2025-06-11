@@ -8,12 +8,12 @@
 // Data in go assemble is in big endian (reverse order)
 DATA ·bgraToRgbaMaskAVX+0x00(SB)/4, $0x03000102
 DATA ·bgraToRgbaMaskAVX+0x04(SB)/4, $0x07040506
-DATA ·bgraToRgbaMaskAVX+0x08(SB)/4, $0x0b09080a
-DATA ·bgraToRgbaMaskAVX+0x0c(SB)/4, $0x0f0d0c0e
+DATA ·bgraToRgbaMaskAVX+0x08(SB)/4, $0x0b08090a
+DATA ·bgraToRgbaMaskAVX+0x0c(SB)/4, $0x0f0c0d0e
 DATA ·bgraToRgbaMaskAVX+0x10(SB)/4, $0x13101112
 DATA ·bgraToRgbaMaskAVX+0x14(SB)/4, $0x17141516
-DATA ·bgraToRgbaMaskAVX+0x18(SB)/4, $0x1b19181a
-DATA ·bgraToRgbaMaskAVX+0x1c(SB)/4, $0x1f1d1c1e
+DATA ·bgraToRgbaMaskAVX+0x18(SB)/4, $0x1b18191a
+DATA ·bgraToRgbaMaskAVX+0x1c(SB)/4, $0x1f1c1d1e
 
 GLOBL ·bgraToRgbaMaskAVX(SB), RODATA, $32
 

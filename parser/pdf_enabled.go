@@ -86,13 +86,19 @@ func (p *PDFParser) Parse(ctx context.Context, file io.Reader, path string) Resu
 		}
 		pageResult := PDFParserResultPage{}
 
-		var width, height C.double
-		C.poppler_page_get_size(page, &width, &height)
+		dpi := 400.0 // Good for ocr
+		scale := dpi / 72.0
+
+		var w, h C.double
+		C.poppler_page_get_size(page, &w, &h)
+		width := int(float64(w) * scale)
+		height := int(float64(h) * scale)
 
 		surface := C.cairo_image_surface_create(C.CAIRO_FORMAT_ARGB32, C.int(int(width)), C.int(int(height)))
 
 		cr := C.cairo_create(surface)
 
+		C.cairo_scale(cr, C.double(scale), C.double(scale))
 		C.cairo_set_source_rgb(cr, 1.0, 1.0, 1.0)
 		C.cairo_paint(cr)
 
@@ -283,13 +289,19 @@ func (p *PDFParser) ParseStream(ctx context.Context, file io.Reader, path string
 			}
 			pageResult := PDFParserStreamResultPage{}
 
-			var width, height C.double
-			C.poppler_page_get_size(page, &width, &height)
+			dpi := 400.0 // Good for ocr
+			scale := dpi / 72.0
+
+			var w, h C.double
+			C.poppler_page_get_size(page, &w, &h)
+			width := int(float64(w) * scale)
+			height := int(float64(h) * scale)
 
 			surface := C.cairo_image_surface_create(C.CAIRO_FORMAT_ARGB32, C.int(int(width)), C.int(int(height)))
 
 			cr := C.cairo_create(surface)
 
+			C.cairo_scale(cr, C.double(scale), C.double(scale))
 			C.cairo_set_source_rgb(cr, 1.0, 1.0, 1.0)
 			C.cairo_paint(cr)
 

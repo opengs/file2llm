@@ -52,7 +52,6 @@ func (p *Tesseract) OCR(ctx context.Context, image io.Reader) (string, error) {
 		if err := p.client.SetImageFromRGBAImage(rgbaImage); err != nil {
 			return "", errors.Join(errors.New("failed to prepare image for OCR"), err)
 		}
-
 	} else {
 		if err := p.client.SetImageFromBytes(imageBytes); err != nil {
 			return "", errors.Join(errors.New("failed to prepare image for OCR"), err)
@@ -134,6 +133,10 @@ func (p *Tesseract) Init() error {
 	if err := p.client.SetVariable("tessedit_pageseg_mode", "1"); err != nil { // Automatic detection of image rotation. Build in function for set segmentation doesnt work, maybe bug in library
 		p.client.Close()
 		return errors.Join(errors.New("failed to set pageseg mode"), err)
+	}
+	if err := p.client.SetVariable("user_defined_dpi", "300"); err != nil { // Same as PDF parser output and default for most scanners
+		p.client.Close()
+		return errors.Join(errors.New("failed to set DPI to 300"), err)
 	}
 	if err := p.client.DisableOutput(); err != nil {
 		p.client.Close()

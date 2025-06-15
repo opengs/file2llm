@@ -26,11 +26,40 @@ func (p *PDFParser) Parse(ctx context.Context, file io.Reader, path string) Resu
 }
 
 func (p *PDFParser) ParseStream(ctx context.Context, file io.Reader, path string) StreamResultIterator {
-	resultChan := make(chan StreamResult)
-	go func() {
-		defer close(resultChan)
-		resultChan <- &PDFParserStreamResult{FullPath: path, CurrentStage: ProgressNew}
-		resultChan <- &PDFParserStreamResult{Err: ErrParserDisabled, FullPath: path, CurrentStage: ProgressCompleted}
-	}()
-	return resultChan
+	return &PDFStreamResultIterator{
+		path: path,
+	}
+}
+
+type PDFStreamResultIterator struct {
+	path      string
+	completed bool
+	startSend bool
+	current   StreamResult
+}
+
+func (i *PDFStreamResultIterator) Current() StreamResult {
+	return i.current
+}
+
+func (i *PDFStreamResultIterator) Next(ctx context.Context) bool {
+	if i.completed {
+		return false
+	}
+
+	if !i.startSend {
+		i.startSend = true
+		i.current = &PDFParserStreamResult{FullPath: i.path}
+		return true
+	}
+
+	i.completed = true
+	i.current = &PDFParserStreamResult{
+		FullPath: i.path,
+		Err:      ErrParserDisabled,
+	}
+	return true
+}
+
+func (i *PDFStreamResultIterator) Close() {
 }

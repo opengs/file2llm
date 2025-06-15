@@ -35,7 +35,9 @@ func TestPNGStream(t *testing.T) {
 	var lastResult StreamResult
 
 	parseProgress := pngParser.ParseStream(context.Background(), bytes.NewReader(testdata.PNG), "")
-	for progress := range parseProgress {
+	defer parseProgress.Close()
+	for parseProgress.Next(t.Context()) {
+		progress := parseProgress.Current()
 		hasNewStage = hasNewStage || (progress.Stage() == ProgressNew)
 		hasCompletedStage = hasCompletedStage || (progress.Stage() == ProgressCompleted)
 		lastResult = progress

@@ -1,4 +1,4 @@
-package basic
+package slidechunk
 
 import (
 	"testing"
@@ -7,14 +7,14 @@ import (
 func TestSplitStringInChunks(t *testing.T) {
 	tests := []struct {
 		name          string
-		chunker       Chunker
+		chunker       slideChunkIterator
 		input         string
 		wantCount     int
 		reconstructed string
 	}{
 		{
 			name: "Exact one chunk",
-			chunker: Chunker{
+			chunker: slideChunkIterator{
 				maxTokens: 2, // 2 * 4 = 8 bytes per chunk
 				slide:     0,
 			},
@@ -24,7 +24,7 @@ func TestSplitStringInChunks(t *testing.T) {
 		},
 		{
 			name: "Two chunks no overlap",
-			chunker: Chunker{
+			chunker: slideChunkIterator{
 				maxTokens: 2,
 				slide:     0,
 			},
@@ -34,7 +34,7 @@ func TestSplitStringInChunks(t *testing.T) {
 		},
 		{
 			name: "Three chunks with slide",
-			chunker: Chunker{
+			chunker: slideChunkIterator{
 				maxTokens: 2,
 				slide:     1, // 4 bytes overlap
 			},
@@ -44,7 +44,7 @@ func TestSplitStringInChunks(t *testing.T) {
 		},
 		{
 			name: "Input shorter than chunk",
-			chunker: Chunker{
+			chunker: slideChunkIterator{
 				maxTokens: 5, // 20 bytes
 				slide:     0,
 			},
@@ -54,7 +54,7 @@ func TestSplitStringInChunks(t *testing.T) {
 		},
 		{
 			name: "Empty input",
-			chunker: Chunker{
+			chunker: slideChunkIterator{
 				maxTokens: 3,
 				slide:     1,
 			},

@@ -48,37 +48,75 @@ func (p *TARParser) Parse(ctx context.Context, file io.Reader, path string) Resu
 	return result
 }
 
-func (p *TARParser) ParseStream(ctx context.Context, file io.Reader, path string) chan StreamResult {
-	resultChan := make(chan StreamResult)
-	go func() {
-		defer close(resultChan)
-		resultChan <- &TARParserStreamResult{FullPath: path, CurrentStage: ProgressNew}
+func (p *TARParser) ParseStream(ctx context.Context, file io.Reader, path string) StreamResultIterator {
+	return &TARStreamResultIterator{
+		ctx:         ctx,
+		file:        file,
+		path:        path,
+		innerParser: p.innerParser,
+	}
+}
 
-		reader := tar.NewReader(file)
-		for {
-			if ctx.Err() != nil {
-				resultChan <- &TARParserStreamResult{Err: errors.Join(errors.New("parsing cancelled due to context error"), ctx.Err()), FullPath: path, CurrentStage: ProgressCompleted}
-				return
-			}
+type TARStreamResultIterator struct {
+	ctx         context.Context
+	file        io.Reader
+	path        string
+	innerParser Parser
 
-			header, err := reader.Next()
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
+	completed   bool
+	reader      *tar.Reader
+	parseStream StreamResultIterator
+	current     StreamResult
+}
 
-				resultChan <- &TARParserStreamResult{Err: errors.Join(ErrBadFile, err), FullPath: path, CurrentStage: ProgressCompleted}
-			}
+func (i *TARStreamResultIterator) Next(ctx context.Context) bool {
+	if i.completed {
+		i.current = nil
+		return false
+	}
 
-			parseStream := p.innerParser.ParseStream(ctx, reader, pathlib.Join(path, header.Name))
-			for progress := range parseStream {
-				resultChan <- &TARParserStreamResult{FullPath: path, CurrentStage: ProgressUpdate, CurrentSubfile: progress}
-			}
+	if i.reader == nil {
+		i.reader = tar.NewReader(i.file)
+		i.current = &TARParserStreamResult{
+			FullPath:     i.path,
+			CurrentStage: ProgressNew,
+		}
+		return true
+	}
+
+	if i.parseStream != nil {
+		if i.parseStream.Next(ctx) {
+			return true
+		} else {
+			i.parseStream.Close()
+			i.parseStream = nil
+		}
+	}
+
+	header, err := i.reader.Next()
+	if err != nil {
+		i.completed = true
+		if err == io.EOF {
+			i.current = &TARParserStreamResult{FullPath: i.path, CurrentStage: ProgressCompleted}
+			return true
 		}
 
-		resultChan <- &TARParserStreamResult{FullPath: path, CurrentStage: ProgressCompleted}
-	}()
-	return resultChan
+		i.current = &TARParserStreamResult{Err: errors.Join(ErrBadFile, err), FullPath: i.path, CurrentStage: ProgressCompleted}
+		return true
+	}
+
+	i.parseStream = i.innerParser.ParseStream(ctx, i.reader, pathlib.Join(i.path, header.Name))
+	return i.Next(ctx)
+}
+
+func (i *TARStreamResultIterator) Current() StreamResult {
+	return i.current
+}
+
+func (i *TARStreamResultIterator) Close() {
+	if i.parseStream != nil {
+		i.parseStream.Close()
+	}
 }
 
 type TARParserResult struct {

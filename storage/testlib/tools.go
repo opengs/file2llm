@@ -19,16 +19,6 @@ func RandString(length int) string {
 	return string(b)
 }
 
-func RandSchemaName(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyz"
-
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = charset[rand.Intn(len(charset))]
-	}
-	return string(b)
-}
-
 func TestStorage(t *testing.T, s storage.Storage, dimensions int) {
 	t.Run("CreateDeleteSource", func(t *testing.T) {
 		sourceUUID := storage.SourceUUID(RandString(32))

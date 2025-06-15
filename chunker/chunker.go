@@ -10,6 +10,9 @@ type Chunk struct {
 	Start *StartChunk
 	Data  *DataChunk
 	End   *EndChunk
+
+	// Internal chunker error.
+	Error error
 }
 
 type StartChunk struct {
@@ -26,6 +29,11 @@ type EndChunk struct {
 	Error    error
 }
 
+type ChunkIterator interface {
+	Next(ctx context.Context) bool
+	Current() Chunk
+}
+
 type Chunker interface {
-	GenerateChunks(ctx context.Context, parseResult chan parser.StreamResult) chan Chunk
+	GenerateChunks(ctx context.Context, parseStream parser.StreamResultIterator) ChunkIterator
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
-	"sync"
 	"time"
 
 	"github.com/opengs/file2llm/chunker"
@@ -52,6 +51,10 @@ func (e *Engine) processSource(ctx context.Context, sourceInfo source.Source, so
 	for {
 		if ctx.Err() != nil {
 			return ctx.Err()
+		}
+
+		if _, err := e.storage.GetOrCreateSource(ctx, storage.SourceUUID(sourceInfo.UUID())); err != nil {
+			return errors.Join(errors.New("failed to ensure that source exists in the storage"), err)
 		}
 
 		f, err := sourceIterator.Next(ctx)
@@ -121,7 +124,7 @@ func (e *Engine) processFile(ctx context.Context, sourceInfo source.Source, f so
 		return nil
 	}
 
-	var processingUUID = fmt.Sprintf("%d", rand.Int63())
+	var processingUUID = fmt.Sprintf("%s-%s-%d-%d", sourceInfo.UUID(), f.Path(), time.Now().UnixNano(), rand.Int63())
 	if err := sourceInfo.NotifyFileProcessingStarted(ctx, source.FileProcessingStartedEvent{
 		UUID:         processingUUID,
 		Path:         f.Path(),
@@ -138,54 +141,35 @@ func (e *Engine) processFile(ctx context.Context, sourceInfo source.Source, f so
 		}
 	}()
 
-	var sendProcessinRunningEventError error
-	sendProcessinRunningEventErrorLock := sync.Mutex{}
-
 	fileParseStream := e.parser.ParseStream(ctx, f, f.Path())
-	fileParseRestream := make(chan parser.StreamResult, 1)
-	go func() {
-		defer close(fileParseRestream)
-		for parseResult := range fileParseStream {
-			if parseResult.Path() == f.Path() && parseResult.Stage() == parser.ProgressUpdate {
-				if err := sourceInfo.NotifyFileProcessingRunning(ctx, source.FileProcessingRunningEvent{
-					UUID:         processingUUID,
-					Path:         f.Path(),
-					UserMetadata: f.UserMetadata(),
-					Progress:     parseResult.Progress(),
-				}); err != nil {
-					sendProcessinRunningEventErrorLock.Lock()
-					sendProcessinRunningEventError = err
-					sendProcessinRunningEventErrorLock.Unlock()
-					return
-				}
-			}
+	defer fileParseStream.Close()
 
-			select {
-			case fileParseRestream <- parseResult:
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-	chunkStream := e.chunker.GenerateChunks(ctx, fileParseRestream)
-	for chunk := range chunkStream {
+	chunkStream := e.chunker.GenerateChunks(ctx, fileParseStream)
+	for chunkStream.Next(ctx) {
+		chunk := chunkStream.Current()
+
 		if chunk.Start != nil && chunk.Start.FilePath != f.Path() {
 			// Handle inner files.
+			// openedFilePathes[chunk.Start.FilePath] = chunk.Start
 		}
 
 		if chunk.Data != nil {
-			relatedFileInfo := openedFilePathes[chunk.Data.FilePath]
+			relatedFileInfo, ok := openedFilePathes[chunk.Data.FilePath]
+			if !ok {
+				// most probably chunk comes from embedded file (like image in PDF) not inner file (like attachment in email).
+				continue
+			}
 
 			embeddings, err := e.embedder.GenerateEmbeddings(ctx, chunk.Data.Data)
 			if err != nil {
 				err = errors.Join(errors.New("error while generating embeddings"), err)
-				if chunk.End.FilePath == f.Path() {
+				if chunk.Data.FilePath == f.Path() {
 					if eventErr := sourceInfo.NotifyFileProcessingDone(ctx, source.FileProcessingDoneEvent{
 						UUID:         processingUUID,
 						Path:         f.Path(),
 						UserMetadata: f.UserMetadata(),
 						Reason:       source.FileProcessingAborted,
-						Error:        chunk.End.Error,
+						Error:        err,
 					}); eventErr != nil {
 						return errors.Join(errors.New("failed to notify source about end of the file processing"), eventErr, err)
 					}
@@ -194,13 +178,13 @@ func (e *Engine) processFile(ctx context.Context, sourceInfo source.Source, f so
 			}
 			if err := e.storage.PutEmbedding(ctx, storage.SourceUUID(sourceInfo.UUID()), relatedFileInfo.UUID, chunk.Data.Data, embeddings); err != nil {
 				err = errors.Join(errors.New("failed to put embeddings in the storage"), err)
-				if chunk.End.FilePath == f.Path() {
+				if chunk.Data.FilePath == f.Path() {
 					if eventErr := sourceInfo.NotifyFileProcessingDone(ctx, source.FileProcessingDoneEvent{
 						UUID:         processingUUID,
 						Path:         f.Path(),
 						UserMetadata: f.UserMetadata(),
 						Reason:       source.FileProcessingAborted,
-						Error:        chunk.End.Error,
+						Error:        err,
 					}); eventErr != nil {
 						return errors.Join(errors.New("failed to notify source about end of the file processing"), eventErr, err)
 					}
@@ -210,7 +194,11 @@ func (e *Engine) processFile(ctx context.Context, sourceInfo source.Source, f so
 		}
 
 		if chunk.End != nil {
-			relatedFileInfo := openedFilePathes[chunk.Data.FilePath]
+			relatedFileInfo, ok := openedFilePathes[chunk.End.FilePath]
+			if !ok {
+				// most probably chunk comes from embedded file (like image in PDF) not inner file (like attachment in email).
+				continue
+			}
 
 			var errorString string
 			if chunk.End.Error != nil {
@@ -250,21 +238,6 @@ func (e *Engine) processFile(ctx context.Context, sourceInfo source.Source, f so
 				}
 			}
 		}
-	}
-
-	sendProcessinRunningEventErrorLock.Lock()
-	defer sendProcessinRunningEventErrorLock.Unlock()
-	if sendProcessinRunningEventError != nil {
-		if err := sourceInfo.NotifyFileProcessingDone(ctx, source.FileProcessingDoneEvent{
-			UUID:         processingUUID,
-			Path:         f.Path(),
-			UserMetadata: f.UserMetadata(),
-			Reason:       source.FileProcessingAborted,
-			Error:        sendProcessinRunningEventError,
-		}); err != nil {
-			return errors.Join(errors.New("failed to notify source about end of the file processing"), err, sendProcessinRunningEventError)
-		}
-		return sendProcessinRunningEventError
 	}
 
 	return nil

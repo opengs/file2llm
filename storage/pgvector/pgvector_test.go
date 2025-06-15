@@ -2,6 +2,7 @@ package pgvector
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"testing"
 
@@ -9,6 +10,16 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/opengs/file2llm/storage/testlib"
 )
+
+func randSchemaName(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyz"
+
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(b)
+}
 
 func getTestingStorage(t *testing.T, options ...PGVectorOption) *PGVectorStorage {
 	dbURL := os.Getenv("TEST_STORAGE_PGVECTOR_DBURL")
@@ -27,7 +38,7 @@ func getTestingStorage(t *testing.T, options ...PGVectorOption) *PGVectorStorage
 		db.Close()
 	})
 
-	schemaName := testlib.RandSchemaName(32)
+	schemaName := randSchemaName(32)
 	if _, err := db.ExecContext(t.Context(), "CREATE SCHEMA "+schemaName); err != nil {
 		t.Error(err.Error())
 		t.FailNow()

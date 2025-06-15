@@ -59,32 +59,79 @@ func (p *CompositeParser) Parse(ctx context.Context, file io.Reader, path string
 	return &CompositeParserResult{Err: &ErrMimeTypeNotSupported{MimeType: mime}, MimeType: mime.String(), FullPath: path}
 }
 
-func (p *CompositeParser) ParseStream(ctx context.Context, file io.Reader, path string) chan StreamResult {
-	resultChan := make(chan StreamResult)
-	go func() {
-		defer close(resultChan)
+func (p *CompositeParser) ParseStream(ctx context.Context, file io.Reader, path string) StreamResultIterator {
+	return &CompositeStreamResultIterator{
+		compositeParser: p,
+		ctx:             ctx,
+		file:            file,
+		path:            path,
+	}
+}
 
+type CompositeStreamResultIterator struct {
+	compositeParser *CompositeParser
+	ctx             context.Context
+	file            io.Reader
+	path            string
+
+	initialized   bool
+	initError     error
+	initErrorSent bool
+	initResult    StreamResult
+
+	parseStream StreamResultIterator
+}
+
+func (i *CompositeStreamResultIterator) Next(ctx context.Context) bool {
+	if !i.initialized {
+		i.initialized = true
 		mimeBlock := make([]byte, 1024)
-		readed, err := io.ReadFull(file, mimeBlock)
+		readed, err := io.ReadFull(i.file, mimeBlock)
 		if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
-			resultChan <- &CompositeParserStreamResult{FullPath: path, CurrentStage: ProgressNew}
-			resultChan <- &CompositeParserStreamResult{Err: errors.Join(errors.New("failed to read file to determine mime type"), err), FullPath: path, CurrentStage: ProgressCompleted}
-			return
+			i.initError = errors.Join(errors.New("failed to read file to determine mime type"), err)
+			i.initResult = &CompositeParserStreamResult{FullPath: i.path, CurrentStage: ProgressNew}
+			return true
 		}
 
 		mime := mimetype.Detect(mimeBlock[:readed])
-		if parser, ok := p.mimeToParser[mime.String()]; ok {
-			parseStream := parser.ParseStream(ctx, io.MultiReader(bytes.NewBuffer(mimeBlock[:readed]), file), path)
-			for progress := range parseStream {
-				resultChan <- progress
-			}
-			return
+		if parser, ok := i.compositeParser.mimeToParser[mime.String()]; ok {
+			i.parseStream = parser.ParseStream(i.ctx, io.MultiReader(bytes.NewBuffer(mimeBlock[:readed]), i.file), i.path)
+			return i.parseStream.Next(ctx)
+		} else {
+			i.initError = &ErrMimeTypeNotSupported{MimeType: mime}
+			i.initResult = &CompositeParserStreamResult{FullPath: i.path, CurrentStage: ProgressNew}
+			return true
 		}
+	}
 
-		resultChan <- &CompositeParserStreamResult{FullPath: path, CurrentStage: ProgressNew}
-		resultChan <- &CompositeParserStreamResult{Err: &ErrMimeTypeNotSupported{MimeType: mime}, MimeType: mime.String(), FullPath: path, CurrentStage: ProgressCompleted}
-	}()
-	return resultChan
+	if i.initError != nil {
+		if i.initErrorSent {
+			i.initResult = nil
+			return false
+		}
+		i.initErrorSent = true
+		i.initResult = &CompositeParserStreamResult{
+			FullPath:     i.path,
+			CurrentStage: ProgressCompleted,
+			Err:          i.initError,
+		}
+		return true
+	}
+
+	return i.parseStream.Next(ctx)
+}
+
+func (i *CompositeStreamResultIterator) Current() StreamResult {
+	if i.initError != nil {
+		return i.initResult
+	}
+	return i.parseStream.Current()
+}
+
+func (i *CompositeStreamResultIterator) Close() {
+	if i.parseStream != nil {
+		i.parseStream.Close()
+	}
 }
 
 type CompositeParserResult struct {

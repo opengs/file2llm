@@ -33,7 +33,7 @@ type TesseractConfig struct {
 	// image/png is the only required format that must be supported and cannot be disabled.
 	// Check supported formats here `https://tesseract-ocr.github.io/tessdoc/InputFormats.html`
 	//
-	// Default value is ["image/png", "image/jpeg", "image/tiff", "image/pnm", "image/gif", "image/webp"]
+	// Default value is ["image/png", "image/jpeg", "image/tiff", "image/pnm", "image/gif", "image/webp"]. It atomatically supports image/file2llm-raw-bgra, whether you specify it or not.
 	// Tesseract doesnt support compressed "image/bmp" image type. So its better to transcode it to PNG.
 	SupportedImageFormats []string `json:"supportedImageFormats"`
 }

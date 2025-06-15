@@ -27,7 +27,7 @@ type Parser interface {
 	// Parse file. Thread safe. Use path to track subfiles or use file name as hint for mime type detection.
 	Parse(ctx context.Context, file io.Reader, path string) Result
 	// Parse file. Thread safe. Use path to track subfiles or use file name as hint for mime type detection. Return chanel that streams results.
-	ParseStream(ctx context.Context, file io.Reader, path string) chan StreamResult
+	ParseStream(ctx context.Context, file io.Reader, path string) StreamResultIterator
 }
 
 // Parsing result
@@ -40,6 +40,15 @@ type Result interface {
 	Error() error
 	// Parsed subfiles. For example files inside archives
 	Subfiles() []Result
+}
+
+type StreamResultIterator interface {
+	// Block until next stream result available or context is done. If no result available, returns false.
+	Next(ctx context.Context) bool
+	// Return current stream result
+	Current() StreamResult
+	// Free all the associated resources
+	Close()
 }
 
 type ParseProgressStage string

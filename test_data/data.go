@@ -2,7 +2,10 @@
 
 package testdata
 
-import _ "embed"
+import (
+	"embed"
+	_ "embed"
+)
 
 //go:embed file.doc
 var DOC []byte
@@ -33,3 +36,6 @@ var TIFF []byte
 
 //go:embed image.webp
 var WEBP []byte
+
+//go:embed fs/*
+var FS embed.FS

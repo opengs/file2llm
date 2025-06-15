@@ -2,7 +2,6 @@ package parser
 
 import (
 	"bytes"
-	"context"
 	"strings"
 	"testing"
 
@@ -10,10 +9,12 @@ import (
 	testdata "github.com/opengs/file2llm/test_data"
 )
 
-func TestBMP(t *testing.T) {
-	ocrProvider := ocr.NewTestingOCRProvider(t)
+func TestBMPConverting(t *testing.T) {
+	cfg := ocr.DefaultTesseractConfig()
+	cfg.SupportedImageFormats = []string{"image/png"}
+	ocrProvider := ocr.NewTestingOCRProvider(t, cfg)
 	bmpParser := NewBMPParser(ocrProvider)
-	result := bmpParser.Parse(context.Background(), bytes.NewReader(testdata.BMP), "")
+	result := bmpParser.Parse(t.Context(), bytes.NewReader(testdata.BMP), "")
 	if result.Error() != nil {
 		t.Error(result.Error())
 		return
@@ -26,22 +27,29 @@ func TestBMP(t *testing.T) {
 	}
 }
 
-func TestBMPStream(t *testing.T) {
-	ocrProvider := ocr.NewTestingOCRProvider(t)
+func TestBMPStreamConverting(t *testing.T) {
+	cfg := ocr.DefaultTesseractConfig()
+	cfg.SupportedImageFormats = []string{"image/png"}
+	ocrProvider := ocr.NewTestingOCRProvider(t, cfg)
 	bmpParser := NewBMPParser(ocrProvider)
 
 	hasNewStage := false
 	hasCompletedStage := false
 	var lastResult StreamResult
 
-	parseProgress := bmpParser.ParseStream(context.Background(), bytes.NewReader(testdata.BMP), "")
-	for progress := range parseProgress {
+	parseProgress := bmpParser.ParseStream(t.Context(), bytes.NewReader(testdata.BMP), "")
+	defer parseProgress.Close()
+	for parseProgress.Next(t.Context()) {
+		progress := parseProgress.Current()
 		hasNewStage = hasNewStage || (progress.Stage() == ProgressNew)
 		hasCompletedStage = hasCompletedStage || (progress.Stage() == ProgressCompleted)
 		lastResult = progress
 	}
 	if !hasNewStage || !hasCompletedStage {
-		t.Fail()
+		t.FailNow()
+	}
+	if lastResult.Error() != nil {
+		t.Fatal(lastResult.Error())
 	}
 
 	resultString := lastResult.String()

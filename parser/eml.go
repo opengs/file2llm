@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/emersion/go-message"
 	_ "github.com/emersion/go-message/charset"
 	"github.com/emersion/go-message/mail"
 )
@@ -84,75 +85,13 @@ func (p *EMLParser) Parse(ctx context.Context, file io.Reader, path string) Resu
 	return &result
 }
 
-func (p *EMLParser) ParseStream(ctx context.Context, file io.Reader, path string) chan StreamResult {
-	resultChan := make(chan StreamResult)
-	go func() {
-		defer close(resultChan)
-		resultChan <- &EMLParserStreamResult{FullPath: path, CurrentStage: ProgressNew}
-
-		mailReader, err := mail.CreateReader(file)
-		if err != nil {
-			resultChan <- &EMLParserStreamResult{FullPath: path, CurrentStage: ProgressCompleted, Err: errors.Join(ErrBadFile, err)}
-			return
-		}
-
-		result := EMLParserResult{
-			Headers:  mailReader.Header.Map(),
-			FullPath: path,
-		}
-
-		partID := -1
-		for {
-			partID += 1
-			part, err := mailReader.NextPart()
-			if err == io.EOF {
-				break
-			} else if err != nil {
-				resultChan <- &EMLParserStreamResult{FullPath: path, CurrentStage: ProgressCompleted, Err: errors.Join(ErrBadFile, errors.New("error while reading email part"), err)}
-				return
-			}
-
-			contentType, ctParams, _ := mime.ParseMediaType(part.Header.Get("Content-Type"))
-			disposition, dispParams, _ := mime.ParseMediaType(part.Header.Get("Content-Disposition"))
-
-			if contentType == "text/plain" {
-				body, _ := io.ReadAll(part.Body)
-				if result.Text != "" {
-					result.Text += "\n"
-				}
-				result.Text += string(body)
-			} else {
-				filename := p.getFileName(ctParams, dispParams, partID)
-				partParse := p.innerParser.ParseStream(ctx, part.Body, pathlib.Join(path, filename))
-				var lastProgress StreamResult
-				for progress := range partParse {
-					lastProgress = progress
-					resultChan <- &EMLParserStreamResult{
-						FullPath:          path,
-						CurrentStage:      ProgressUpdate,
-						CurrentPartHeader: part.Header,
-						CurrentPart:       progress,
-					}
-				}
-
-				if lastProgress.Error() != nil || disposition != "attachment" {
-					if result.Text != "" {
-						result.Text += "\n"
-					}
-					result.Text += fmt.Sprintf("--- Inline attachment begin: %s ---\n", lastProgress.Path())
-					result.Text += lastProgress.String()
-					result.Text += fmt.Sprintf("--- Inline attachment end: %s ---\n", lastProgress.Path())
-				}
-			}
-		}
-
-		resultChan <- &EMLParserStreamResult{
-			FullPath:     path,
-			Text:         result.String(),
-			CurrentStage: ProgressCompleted,
-		}
-	}()
-	return resultChan
+func (p *EMLParser) ParseStream(ctx context.Context, file io.Reader, path string) StreamResultIterator {
+	return &EMLStreamResultIterator{
+		emlParser: p,
+		ctx:       ctx,
+		file:      file,
+		path:      path,
+	}
 }
 
 func (p *EMLParser) getFileName(ctParams, dispParams map[string]string, partID int) string {
@@ -163,6 +102,154 @@ func (p *EMLParser) getFileName(ctParams, dispParams map[string]string, partID i
 		return filepath.Base(name)
 	}
 	return fmt.Sprintf("ext_%d", partID)
+}
+
+type EMLStreamResultIterator struct {
+	emlParser *EMLParser
+	ctx       context.Context
+	file      io.Reader
+	path      string
+
+	completed           bool
+	initialized         bool
+	initializationError error
+	reader              *mail.Reader
+	part                *mail.Part
+	partDisposition     string
+	partIndex           int
+	partParse           StreamResultIterator
+
+	current StreamResult
+}
+
+func (i *EMLStreamResultIterator) Next(ctx context.Context) bool {
+	if i.completed {
+		i.current = nil
+		return false
+	}
+
+	if i.initializationError != nil {
+		i.completed = true
+		i.current = &EMLParserStreamResult{
+			FullPath: i.path,
+			Err:      i.initializationError,
+		}
+		return true
+	}
+
+	if i.reader == nil {
+		msg, err := message.Read(i.file)
+		if err != nil {
+			i.initializationError = err
+			i.current = &EMLParserStreamResult{
+				FullPath:     i.path,
+				CurrentStage: ProgressNew,
+			}
+			return true
+		}
+
+		i.reader = mail.NewReader(msg)
+		i.current = &EMLParserStreamResult{
+			FullPath:     i.path,
+			CurrentStage: ProgressNew,
+			Headers:      i.reader.Header.Map(),
+		}
+		return true
+	}
+
+	if i.part == nil {
+		i.partIndex += 1
+		part, err := i.reader.NextPart()
+		if err != nil {
+			if err == io.EOF {
+				i.completed = true
+				i.current = &EMLParserStreamResult{
+					FullPath:     i.path,
+					CurrentStage: ProgressCompleted,
+				}
+				return true
+			}
+
+			i.completed = true
+			i.current = &EMLParserStreamResult{
+				FullPath:     i.path,
+				CurrentStage: ProgressCompleted,
+				Err:          errors.Join(errors.New("failed to get next part from email"), err),
+			}
+			return true
+		}
+
+		contentType, ctParams, _ := mime.ParseMediaType(part.Header.Get("Content-Type"))
+		disposition, dispParams, _ := mime.ParseMediaType(part.Header.Get("Content-Disposition"))
+		i.partDisposition = disposition
+
+		if contentType == "text/plain" {
+			body, err := io.ReadAll(part.Body)
+			if err != nil {
+				i.completed = true
+				i.current = &EMLParserStreamResult{
+					FullPath:     i.path,
+					CurrentStage: ProgressCompleted,
+					Err:          errors.Join(errors.New("failed to read part body"), err),
+				}
+				return true
+			}
+
+			i.current = &EMLParserStreamResult{
+				FullPath:          i.path,
+				CurrentStage:      ProgressUpdate,
+				CurrentPartHeader: i.part.Header,
+				Text:              string(body),
+			}
+			i.part = nil
+			return true
+		} else {
+			filename := i.emlParser.getFileName(ctParams, dispParams, i.partIndex)
+			i.partParse = i.emlParser.innerParser.ParseStream(ctx, part.Body, pathlib.Join(i.path, filename))
+		}
+	}
+
+	if i.partParse.Next(ctx) {
+		if i.partDisposition != "attachment" {
+			i.current = &EMLParserStreamResult{
+				FullPath:     i.path,
+				CurrentStage: ProgressUpdate,
+				Text:         i.partParse.Current().String(),
+			}
+			if i.partParse.Current().Error() != nil {
+				i.current = &EMLParserStreamResult{
+					FullPath:     i.path,
+					CurrentStage: ProgressCompleted,
+					Text:         i.partParse.Current().String(),
+					Err:          errors.Join(fmt.Errorf("failed to parse embeded part %s of the email", i.partParse.Current().Path()), i.partParse.Current().Error()),
+				}
+				i.completed = true
+			}
+		} else {
+			i.current = &EMLParserStreamResult{
+				FullPath:          i.path,
+				CurrentStage:      ProgressUpdate,
+				CurrentPartHeader: i.part.Header,
+				CurrentPart:       i.partParse.Current(),
+			}
+		}
+		return true
+	} else {
+		i.partParse.Close()
+		i.part = nil
+		return i.Next(ctx)
+	}
+}
+
+func (i *EMLStreamResultIterator) Current() StreamResult {
+	return i.current
+}
+
+func (i *EMLStreamResultIterator) Close() {
+	if i.partParse != nil {
+		i.partParse.Close()
+		i.partParse = nil
+	}
 }
 
 type EMLParserResult struct {
@@ -213,12 +300,13 @@ func (r *EMLParserResult) Subfiles() []Result {
 }
 
 type EMLParserStreamResult struct {
-	FullPath          string             `json:"path"`
-	Text              string             `json:"text"`
-	CurrentStage      ParseProgressStage `json:"stage"`
-	CurrentPartHeader mail.PartHeader    `json:"subResultHeader"`
-	CurrentPart       StreamResult       `json:"subResult"`
-	Err               error              `json:"error"`
+	FullPath          string              `json:"path"`
+	Text              string              `json:"text"`
+	CurrentStage      ParseProgressStage  `json:"stage"`
+	Headers           map[string][]string `json:"headers"`
+	CurrentPartHeader mail.PartHeader     `json:"subResultHeader"`
+	CurrentPart       StreamResult        `json:"subResult"`
+	Err               error               `json:"error"`
 }
 
 func (r *EMLParserStreamResult) Path() string {
@@ -238,7 +326,24 @@ func (r *EMLParserStreamResult) SubResult() StreamResult {
 }
 
 func (r *EMLParserStreamResult) String() string {
-	return ""
+	var result strings.Builder
+
+	if len(r.Headers) != 0 {
+		result.WriteString("------ Headers start------\n")
+		for header, vals := range r.Headers {
+			result.WriteString(header)
+			result.WriteString(": ")
+			result.WriteString(strings.Join(vals, ", "))
+			result.WriteString("\n")
+		}
+		result.WriteString("------ Headers end------\n\n")
+	}
+
+	if len(r.Text) != 0 {
+		result.WriteString(r.Text)
+	}
+
+	return result.String()
 }
 
 func (r *EMLParserStreamResult) Error() error {

@@ -52,108 +52,23 @@ func (p *JPEGParser) prepareData(file io.Reader) (io.Reader, error) {
 func (p *JPEGParser) Parse(ctx context.Context, file io.Reader, path string) Result {
 	imageData, err := p.prepareData(file)
 	if err != nil {
-		return &JPEGParserResult{Err: errors.Join(errors.New("failed to prepare image data"), err), FullPath: path}
+		return &ImageParserResult{Err: errors.Join(errors.New("failed to prepare image data"), err), FullPath: path}
 	}
 
 	text, err := p.ocrProvider.OCR(ctx, imageData)
 	if err != nil {
-		return &JPEGParserResult{Err: errors.Join(errors.New("errors while running OCR"), err), FullPath: path}
+		return &ImageParserResult{Err: errors.Join(errors.New("errors while running OCR"), err), FullPath: path}
 	}
 
-	return &JPEGParserResult{Text: text, FullPath: path}
+	return &ImageParserResult{Text: text, FullPath: path}
 }
 
-func (p *JPEGParser) ParseStream(ctx context.Context, file io.Reader, path string) chan StreamResult {
-	resultChan := make(chan StreamResult)
-	go func() {
-		defer close(resultChan)
-		resultChan <- &JPEGParserStreamResult{FullPath: path, CurrentStage: ProgressNew}
-
-		imageData, err := p.prepareData(file)
-		if err != nil {
-			resultChan <- &JPEGParserStreamResult{
-				Err:          errors.Join(errors.New("failed to prepare image data"), err),
-				FullPath:     path,
-				CurrentStage: ProgressCompleted,
-			}
-		}
-
-		ocrProgress := p.ocrProvider.OCRWithProgress(ctx, imageData)
-		for update := range ocrProgress.CompletionUpdates() {
-			resultChan <- &JPEGParserStreamResult{
-				FullPath:        path,
-				CurrentStage:    ProgressUpdate,
-				CurrentProgress: update,
-			}
-		}
-		text, err := ocrProgress.Text()
-		if err != nil {
-			resultChan <- &JPEGParserStreamResult{
-				FullPath:     path,
-				CurrentStage: ProgressCompleted,
-				Err:          err,
-			}
-		}
-
-		resultChan <- &JPEGParserStreamResult{
-			FullPath:     path,
-			Text:         text,
-			CurrentStage: ProgressCompleted,
-		}
-	}()
-	return resultChan
-}
-
-type JPEGParserResult struct {
-	FullPath string `json:"path"`
-	Text     string `json:"text"`
-	Err      error  `json:"error"`
-}
-
-func (r *JPEGParserResult) Path() string {
-	return r.FullPath
-}
-
-func (r *JPEGParserResult) String() string {
-	return r.Text
-}
-
-func (r *JPEGParserResult) Error() error {
-	return r.Err
-}
-
-func (r *JPEGParserResult) Subfiles() []Result {
-	return nil
-}
-
-type JPEGParserStreamResult struct {
-	FullPath        string             `json:"path"`
-	Text            string             `json:"text"`
-	CurrentStage    ParseProgressStage `json:"stage"`
-	CurrentProgress uint8              `json:"progress"`
-	Err             error              `json:"error"`
-}
-
-func (r *JPEGParserStreamResult) Path() string {
-	return r.FullPath
-}
-
-func (r *JPEGParserStreamResult) Stage() ParseProgressStage {
-	return r.CurrentStage
-}
-
-func (r *JPEGParserStreamResult) Progress() uint8 {
-	return r.CurrentProgress
-}
-
-func (r *JPEGParserStreamResult) SubResult() StreamResult {
-	return nil
-}
-
-func (r *JPEGParserStreamResult) String() string {
-	return r.Text
-}
-
-func (r *JPEGParserStreamResult) Error() error {
-	return r.Err
+func (p *JPEGParser) ParseStream(ctx context.Context, file io.Reader, path string) StreamResultIterator {
+	return &ImageStreamResultIterator{
+		path:             path,
+		file:             file,
+		imagePreparation: p.prepareData,
+		ocrProvider:      p.ocrProvider,
+		baseContext:      ctx,
+	}
 }

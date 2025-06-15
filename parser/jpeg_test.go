@@ -11,7 +11,27 @@ import (
 )
 
 func TestJPEG(t *testing.T) {
-	ocrProvider := ocr.NewTestingOCRProvider(t)
+	cfg := ocr.DefaultTesseractConfig()
+	cfg.SupportedImageFormats = []string{"image/jpeg"}
+	ocrProvider := ocr.NewTestingOCRProvider(t, cfg)
+	jpegParser := NewJPEGParser(ocrProvider)
+	result := jpegParser.Parse(context.Background(), bytes.NewReader(testdata.JPEG), "")
+	if result.Error() != nil {
+		t.Error(result.Error())
+		return
+	}
+
+	resultString := result.String()
+	resultString = strings.ToLower(resultString)
+	if !strings.Contains(resultString, "hello") {
+		t.Fail()
+	}
+}
+
+func TestJPEGConverting(t *testing.T) {
+	cfg := ocr.DefaultTesseractConfig()
+	cfg.SupportedImageFormats = []string{"image/png"}
+	ocrProvider := ocr.NewTestingOCRProvider(t, cfg)
 	jpegParser := NewJPEGParser(ocrProvider)
 	result := jpegParser.Parse(context.Background(), bytes.NewReader(testdata.JPEG), "")
 	if result.Error() != nil {
@@ -27,7 +47,9 @@ func TestJPEG(t *testing.T) {
 }
 
 func TestJPEGStream(t *testing.T) {
-	ocrProvider := ocr.NewTestingOCRProvider(t)
+	cfg := ocr.DefaultTesseractConfig()
+	cfg.SupportedImageFormats = []string{"image/jpeg"}
+	ocrProvider := ocr.NewTestingOCRProvider(t, cfg)
 	jpegParser := NewJPEGParser(ocrProvider)
 
 	hasNewStage := false
@@ -35,13 +57,50 @@ func TestJPEGStream(t *testing.T) {
 	var lastResult StreamResult
 
 	parseProgress := jpegParser.ParseStream(context.Background(), bytes.NewReader(testdata.JPEG), "")
-	for progress := range parseProgress {
+	defer parseProgress.Close()
+	for parseProgress.Next(t.Context()) {
+		progress := parseProgress.Current()
 		hasNewStage = hasNewStage || (progress.Stage() == ProgressNew)
 		hasCompletedStage = hasCompletedStage || (progress.Stage() == ProgressCompleted)
 		lastResult = progress
 	}
 	if !hasNewStage || !hasCompletedStage {
 		t.Fail()
+	}
+	if lastResult.Error() != nil {
+		t.Fatal(lastResult.Error())
+	}
+
+	resultString := lastResult.String()
+	resultString = strings.ToLower(resultString)
+	if !strings.Contains(resultString, "hello") {
+		t.Fail()
+	}
+}
+
+func TestJPEGStreamConverting(t *testing.T) {
+	cfg := ocr.DefaultTesseractConfig()
+	cfg.SupportedImageFormats = []string{"image/png"}
+	ocrProvider := ocr.NewTestingOCRProvider(t, cfg)
+	jpegParser := NewJPEGParser(ocrProvider)
+
+	hasNewStage := false
+	hasCompletedStage := false
+	var lastResult StreamResult
+
+	parseProgress := jpegParser.ParseStream(context.Background(), bytes.NewReader(testdata.JPEG), "")
+	defer parseProgress.Close()
+	for parseProgress.Next(t.Context()) {
+		progress := parseProgress.Current()
+		hasNewStage = hasNewStage || (progress.Stage() == ProgressNew)
+		hasCompletedStage = hasCompletedStage || (progress.Stage() == ProgressCompleted)
+		lastResult = progress
+	}
+	if !hasNewStage || !hasCompletedStage {
+		t.Fail()
+	}
+	if lastResult.Error() != nil {
+		t.Fatal(lastResult.Error())
 	}
 
 	resultString := lastResult.String()

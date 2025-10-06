@@ -1,6 +1,8 @@
 package parser
 
-import "strings"
+import (
+	"strings"
+)
 
 type PDFParserResult struct {
 	FullPath string   `json:"path"`
@@ -17,13 +19,16 @@ func (r *PDFParserResult) String() string {
 	var result strings.Builder
 
 	if r.Metadata != "" {
-		result.WriteString("------ Metadata %d ------\n\n")
+		result.WriteString("------ Metadata ------\n\n")
 		result.WriteString(r.Metadata)
 		result.WriteString("\n\n")
 	}
 
+	result.WriteString("------ Pages ------\n\n")
+
 	for _, page := range r.Pages {
 		result.WriteString(page)
+		result.WriteString("\n")
 	}
 
 	return result.String()

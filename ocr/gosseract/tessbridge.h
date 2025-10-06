@@ -41,6 +41,7 @@ int GetPageSegMode(TessBaseAPI);
 char* UTF8Text(TessBaseAPI);
 char* UTF8Recognize(TessBaseAPI a, struct tess_progress_handler* progress_handler);
 char* HOCRText(TessBaseAPI);
+void DeleteResult(char*);
 const char* Version(TessBaseAPI);
 const char* GetDataPath();
 

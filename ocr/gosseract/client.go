@@ -381,7 +381,10 @@ func (client *Client) Text() (out string, err error) {
 	if err = client.init(); err != nil {
 		return
 	}
-	out = C.GoString(C.UTF8Text(client.api))
+	rawText := C.UTF8Text(client.api)
+	defer C.DeleteResult(rawText)
+
+	out = C.GoString(rawText)
 	if client.Trim {
 		out = strings.Trim(out, "\n")
 	}
@@ -417,6 +420,7 @@ func (client *Client) Recognize() (*RecognizeJob, error) {
 			return
 		}
 		job.Result = C.GoString(cResult)
+		C.DeleteResult(cResult)
 	}()
 
 	go func() {
@@ -449,7 +453,9 @@ func (client *Client) HOCRText() (out string, err error) {
 	if err = client.init(); err != nil {
 		return
 	}
-	out = C.GoString(C.HOCRText(client.api))
+	result := C.HOCRText(client.api)
+	defer C.DeleteResult(result)
+	out = C.GoString(result)
 	return
 }
 

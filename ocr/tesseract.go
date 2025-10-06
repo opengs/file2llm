@@ -1,6 +1,9 @@
 package ocr
 
-import "path"
+import (
+	"path"
+	"runtime"
+)
 
 // Model type used by Tesseract
 type TesseractModelType string
@@ -39,6 +42,11 @@ type TesseractConfig struct {
 }
 
 func DefaultTesseractConfig() TesseractConfig {
+	nullFile := "/dev/null"
+	if runtime.GOOS == "windows" {
+		nullFile = "NUL"
+	}
+
 	return TesseractConfig{
 		Languages:        []string{"eng"},
 		ModelType:        TesseractModelNormal,
@@ -51,7 +59,8 @@ func DefaultTesseractConfig() TesseractConfig {
 			"load_number_dawg":  "0",
 			"load_unambig_dawg": "0",
 			"load_bigram_dawg":  "0",
+			"debug_file":        nullFile,
 		},
-		SupportedImageFormats: []string{"image/png", "image/jpeg", "image/tiff", "image/pnm", "image/gif", "image/webp"},
+		SupportedImageFormats: []string{"image/file2llm-raw-bgra", "image/png", "image/jpeg", "image/tiff", "image/pnm", "image/gif", "image/webp"},
 	}
 }

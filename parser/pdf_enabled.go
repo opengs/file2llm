@@ -35,7 +35,7 @@ func NewPDFParser(innerParser Parser) *PDFParser {
 	return &PDFParser{
 		innerParser: innerParser,
 
-		dpi: 600, // Ideal for ocr. Can be set to 300 for better performance
+		dpi: 300, // Ideal for ocr
 	}
 }
 
@@ -101,7 +101,7 @@ func (p *PDFParser) Parse(ctx context.Context, file io.Reader, path string) Resu
 			}
 		}
 
-		imageResult := p.innerParser.Parse(ctx, pageImage, "")
+		imageResult := p.innerParser.Parse(context.WithValue(ctx, "file2llm_DPI", p.dpi), pageImage, "")
 		if imageResult.Error() != nil {
 			return &PDFParserResult{
 				FullPath: path,
@@ -351,7 +351,7 @@ func (i *PDFStreamResultIterator) Next(ctx context.Context) bool {
 			}
 			return true
 		}
-		i.pageProcessing = i.pdfParser.innerParser.ParseStream(context.WithValue(i.ctx, "file2llm_DPI", 300), imageData, "")
+		i.pageProcessing = i.pdfParser.innerParser.ParseStream(context.WithValue(i.ctx, "file2llm_DPI", i.pdfParser.dpi), imageData, "")
 
 		return i.Next(ctx)
 	}

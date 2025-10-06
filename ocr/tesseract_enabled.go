@@ -13,8 +13,10 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
+	"unicode"
 
 	"github.com/opengs/file2llm/ocr/gosseract"
 	"github.com/opengs/file2llm/parser/bgra"
@@ -32,6 +34,19 @@ func NewTesseract(config TesseractConfig) *Tesseract {
 	return &Tesseract{
 		config: config,
 	}
+}
+
+func (p *Tesseract) filterVisible(s string) string {
+	var b strings.Builder
+	b.Grow(len(s)) // preallocate memory
+
+	for _, r := range s {
+		if r == '\n' || (unicode.IsPrint(r) && (r == ' ' || unicode.IsLetter(r) || unicode.IsNumber(r) ||
+			unicode.IsPunct(r) || unicode.IsSymbol(r))) {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 func (p *Tesseract) OCR(ctx context.Context, image io.Reader) (string, error) {
@@ -70,7 +85,7 @@ func (p *Tesseract) OCR(ctx context.Context, image io.Reader) (string, error) {
 		return "", errors.Join(errors.New("OCR process failed"), err)
 	}
 
-	return result, nil
+	return p.filterVisible(result), nil
 }
 
 func (p *Tesseract) OCRWithProgress(ctx context.Context, image io.Reader) OCRProgress {
@@ -135,7 +150,7 @@ func (p *Tesseract) OCRWithProgress(ctx context.Context, image io.Reader) OCRPro
 		}
 
 		progress.resultError = job.Error
-		progress.resultText = job.Result
+		progress.resultText = p.filterVisible(job.Result)
 	}()
 
 	return progress

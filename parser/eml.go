@@ -111,7 +111,6 @@ type EMLStreamResultIterator struct {
 	path      string
 
 	completed           bool
-	initialized         bool
 	initializationError error
 	reader              *mail.Reader
 	part                *mail.Part

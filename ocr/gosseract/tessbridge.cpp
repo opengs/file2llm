@@ -73,11 +73,11 @@ int Init(TessBaseAPI a, char* tessdataprefix, char* languages, char* configfilep
     tesseract::TessBaseAPI* api = (tesseract::TessBaseAPI*)a;
 
     // {{{ Redirect STDERR to given buffer
-    fflush(stderr);
-    int original_stderr;
-    original_stderr = dup(STDERR_FILENO);
-    (void)freopen("/dev/null", "a", stderr);
-    setbuf(stderr, errbuf);
+    //fflush(stderr);
+    //int original_stderr;
+    //original_stderr = dup(STDERR_FILENO);
+    //(void)freopen("/dev/null", "a", stderr);
+    //setbuf(stderr, errbuf);
     // }}}
 
     int ret;
@@ -90,10 +90,10 @@ int Init(TessBaseAPI a, char* tessdataprefix, char* languages, char* configfilep
     }
 
     // {{{ Restore default stderr
-    (void)freopen("/dev/null", "a", stderr);
-    dup2(original_stderr, STDERR_FILENO);
-    close(original_stderr);
-    setbuf(stderr, NULL);
+    //(void)freopen("/dev/null", "a", stderr);
+    //dup2(original_stderr, STDERR_FILENO);
+    //close(original_stderr);
+    //setbuf(stderr, NULL);
     // }}}
 
     return ret;
@@ -132,6 +132,10 @@ char* UTF8Text(TessBaseAPI a) {
 char* HOCRText(TessBaseAPI a) {
     tesseract::TessBaseAPI* api = (tesseract::TessBaseAPI*)a;
     return api->GetHOCRText(0);
+}
+
+void DeleteResult(char *r) {
+    delete[] r;
 }
 
 char* UTF8Recognize(TessBaseAPI a, struct tess_progress_handler* progress_handler) {

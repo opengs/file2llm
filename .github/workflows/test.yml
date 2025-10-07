@@ -44,7 +44,7 @@ jobs:
         run: go mod download
 
       - name: Run Tests
-        env:
-          TEST_EMBEDDER_OLLAMA_BASEURL: http://127.0.0.1:11434/api
-          TEST_STORAGE_PGVECTOR_DBURL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        #env:
+        #  TEST_EMBEDDER_OLLAMA_BASEURL: http://127.0.0.1:11434/api
+        #  TEST_STORAGE_PGVECTOR_DBURL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
         run: go test --tags=file2llm_feature_tesseract,file2llm_feature_pdf,test ./...

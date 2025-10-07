@@ -1,9 +1,9 @@
 {
     "gopls": {
-      "build.buildFlags": ["-tags=test"],
+      "build.buildFlags": ["-tags=file2llm_feature_tesseract,file2llm_feature_pdf,test"],
     },
     "go.testFlags": [
-      "-tags=test"
+      "-tags=file2llm_feature_tesseract,file2llm_feature_pdf,test"
     ],
     "go.testEnvFile": "${workspaceFolder}/.env"
   }

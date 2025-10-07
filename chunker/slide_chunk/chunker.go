@@ -66,6 +66,9 @@ func (i *slideChunkIterator) processChunks(filePath string, stage parser.ParsePr
 
 	entireText := i.data[filePath].String()
 	chunks := i.splitStringInChunks(entireText)
+	if len(chunks) == 0 {
+		return
+	}
 	if len(chunks) == 1 {
 		if stage == parser.ProgressCompleted {
 			i.ready = append(i.ready, chunker.Chunk{

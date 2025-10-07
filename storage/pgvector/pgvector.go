@@ -286,6 +286,10 @@ func (s *PGVectorStorage) FinishFileProcessing(ctx context.Context, source stora
 		return storage.ErrFileDoesntExist
 	}
 
+	if len(parsePartsErrors) == 0 {
+		parsePartsErrors = make([]string, 0)
+	}
+
 	query := fmt.Sprintf(`
 		UPDATE %s
 		SET

@@ -13,7 +13,7 @@ const FeaturePDFEnabled = false
 type PDFParser struct {
 }
 
-func NewPDFParser(innerParser Parser) *PDFParser {
+func NewPDFParser(innerParser Parser, dpi uint32) *PDFParser {
 	return &PDFParser{}
 }
 

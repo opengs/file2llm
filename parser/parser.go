@@ -91,7 +91,7 @@ func New(ocrProvider ocr.Provider) Parser {
 		)
 	}
 
-	composite.AddParsers(NewPDFParser(composite))
+	composite.AddParsers(NewPDFParser(composite, 300))
 	composite.AddParsers(NewTARParser(composite))
 	composite.AddParsers(NewEMLParser(composite))
 	return composite

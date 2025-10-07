@@ -31,11 +31,11 @@ type PDFParser struct {
 	dpi uint32
 }
 
-func NewPDFParser(innerParser Parser) *PDFParser {
+func NewPDFParser(innerParser Parser, dpi uint32) *PDFParser {
 	return &PDFParser{
 		innerParser: innerParser,
 
-		dpi: 300, // Ideal for ocr
+		dpi: dpi, // Ideal for ocr
 	}
 }
 

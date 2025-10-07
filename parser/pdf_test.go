@@ -12,7 +12,7 @@ import (
 
 func TestPDF(t *testing.T) {
 	ocrProvider := ocr.NewTestingOCRProvider(t)
-	pdfParser := NewPDFParser(New(ocrProvider))
+	pdfParser := NewPDFParser(New(ocrProvider), 300)
 	result := pdfParser.Parse(context.Background(), bytes.NewReader(testdata.PDF), "")
 	if result.Error() != nil {
 		t.Error(result.Error())
@@ -27,7 +27,7 @@ func TestPDF(t *testing.T) {
 
 func TestPDFStream(t *testing.T) {
 	ocrProvider := ocr.NewTestingOCRProvider(t)
-	pdfParser := NewPDFParser(New(ocrProvider))
+	pdfParser := NewPDFParser(New(ocrProvider), 300)
 
 	hasNewStage := false
 	hasCompletedStage := false

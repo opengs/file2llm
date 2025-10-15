@@ -58,7 +58,7 @@ func (p *Tesseract) OCR(ctx context.Context, image io.Reader) (string, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	dpi, ok := ctx.Value("file2llm_DPI").(int)
+	dpi, ok := ctx.Value("file2llm_DPI").(uint32)
 	if !ok {
 		dpi = 0
 	}
@@ -72,11 +72,11 @@ func (p *Tesseract) OCR(ctx context.Context, image io.Reader) (string, error) {
 			return "", errors.Join(errors.New("failed to read bgra raw image data"), err)
 		}
 		rgbaImage := img.ConvertBGRAtoRGBAInplace()
-		if err := p.client.SetImageFromRGBAImage(rgbaImage); err != nil {
+		if err := p.client.SetImageFromRGBAImage(rgbaImage, uint32(dpi)); err != nil {
 			return "", errors.Join(errors.New("failed to prepare image for OCR"), err)
 		}
 	} else {
-		if err := p.client.SetImageFromBytes(imageBytes); err != nil {
+		if err := p.client.SetImageFromBytes(imageBytes, dpi); err != nil {
 			return "", errors.Join(errors.New("failed to prepare image for OCR"), err)
 		}
 	}
@@ -107,13 +107,9 @@ func (p *Tesseract) OCRWithProgress(ctx context.Context, image io.Reader) OCRPro
 		p.lock.Lock()
 		defer p.lock.Unlock()
 
-		dpi, ok := ctx.Value("file2llm_DPI").(int)
+		dpi, ok := ctx.Value("file2llm_DPI").(uint32)
 		if !ok {
 			dpi = 0
-		}
-		if err := p.client.SetVariable("user_defined_dpi", fmt.Sprintf("%d", dpi)); err != nil {
-			progress.resultError = errors.Join(errors.New("failed to set DPI"), err)
-			return
 		}
 
 		if bytes.HasPrefix(imageBytes, bgra.RAWBGRA_HEADER) {
@@ -123,13 +119,13 @@ func (p *Tesseract) OCRWithProgress(ctx context.Context, image io.Reader) OCRPro
 				return
 			}
 			rgbaImage := img.ConvertBGRAtoRGBAInplace()
-			if err := p.client.SetImageFromRGBAImage(rgbaImage); err != nil {
+			if err := p.client.SetImageFromRGBAImage(rgbaImage, dpi); err != nil {
 				progress.resultError = errors.Join(errors.New("failed to prepare image for OCR"), err)
 				return
 			}
 
 		} else {
-			if err := p.client.SetImageFromBytes(imageBytes); err != nil {
+			if err := p.client.SetImageFromBytes(imageBytes, dpi); err != nil {
 				progress.resultError = errors.Join(errors.New("failed to prepare image for OCR"), err)
 				return
 			}

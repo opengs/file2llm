@@ -150,7 +150,7 @@ func (client *Client) SetImage(imagepath string) error {
 }
 
 // SetImageFromBytes sets the image data to be processed OCR.
-func (client *Client) SetImageFromBytes(data []byte) error {
+func (client *Client) SetImageFromBytes(data []byte, dpi uint32) error {
 
 	if client.api == nil {
 		return ErrClientNotConstructed
@@ -164,7 +164,7 @@ func (client *Client) SetImageFromBytes(data []byte) error {
 		client.pixImage = nil
 	}
 
-	img := C.CreatePixImageFromBytes((*C.uchar)(unsafe.Pointer(&data[0])), C.int(len(data)))
+	img := C.CreatePixImageFromBytes((*C.uchar)(unsafe.Pointer(&data[0])), C.int(len(data)), C.int(int(dpi)))
 	if img == nil {
 		return fmt.Errorf("failed to create PixImage from bytes: %d", len(data))
 	}
@@ -174,7 +174,7 @@ func (client *Client) SetImageFromBytes(data []byte) error {
 	return nil
 }
 
-func (client *Client) SetImageFromRGBAImage(sourceImage *image.RGBA) error {
+func (client *Client) SetImageFromRGBAImage(sourceImage *image.RGBA, dpi uint32) error {
 
 	if client.api == nil {
 		return ErrClientNotConstructed
@@ -188,7 +188,7 @@ func (client *Client) SetImageFromRGBAImage(sourceImage *image.RGBA) error {
 		client.pixImage = nil
 	}
 
-	img := C.CreatePixImageFromRGBAData((*C.uchar)(unsafe.Pointer(&sourceImage.Pix[0])), C.int(sourceImage.Rect.Dx()), C.int(sourceImage.Rect.Dy()), C.int(sourceImage.Stride))
+	img := C.CreatePixImageFromRGBAData((*C.uchar)(unsafe.Pointer(&sourceImage.Pix[0])), C.int(sourceImage.Rect.Dx()), C.int(sourceImage.Rect.Dy()), C.int(sourceImage.Stride), C.int(int(dpi)))
 	if img == nil {
 		return fmt.Errorf("failed to create PixImage from bytes: %d", len(sourceImage.Pix))
 	}

@@ -46,8 +46,8 @@ const char* Version(TessBaseAPI);
 const char* GetDataPath();
 
 PixImage CreatePixImageByFilePath(char*);
-PixImage CreatePixImageFromBytes(unsigned char*, int);
-PixImage CreatePixImageFromRGBAData(unsigned char*, int, int, int);
+PixImage CreatePixImageFromBytes(unsigned char*, int, int);
+PixImage CreatePixImageFromRGBAData(unsigned char*, int, int, int, int);
 void DestroyPixImage(PixImage pix);
 
 #ifdef __cplusplus

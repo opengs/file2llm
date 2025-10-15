@@ -255,12 +255,16 @@ PixImage CreatePixImageByFilePath(char* imagepath) {
     return (void*)image;
 }
 
-PixImage CreatePixImageFromBytes(unsigned char* data, int size) {
+PixImage CreatePixImageFromBytes(unsigned char* data, int size, int dpi) {
     Pix* image = pixReadMem(data, (size_t)size);
+    if (dpi != 0) {
+        pixSetResolution(image, dpi, dpi);
+    }
+
     return (void*)image;
 }
 
-PixImage CreatePixImageFromRGBAData(unsigned char* data, int width, int height, int stride) {
+PixImage CreatePixImageFromRGBAData(unsigned char* data, int width, int height, int stride, int dpi) {
     PIX* image = pixCreate(width, height, 32);
     if (!image) {
         return (void*)image;
@@ -274,6 +278,10 @@ PixImage CreatePixImageFromRGBAData(unsigned char* data, int width, int height, 
         uint32_t* dstRow = pixData + y * wpl;
 
         std::memcpy(dstRow, srcRow, width * 4);
+    }
+
+    if (dpi != 0) {
+        pixSetResolution(image, dpi, dpi);
     }
 
     return (void*)image;
